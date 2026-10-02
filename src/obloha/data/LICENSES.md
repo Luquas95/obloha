@@ -51,3 +51,16 @@ volně šiřitelná (US Government work, public domain).
 ## Databáze měst (`cities.sqlite`)
 
 Viz sekce níže, doplněno skriptem `scripts/build_cities.py`.
+
+### Obsah `cities.sqlite`
+
+* **Obce ČR** (všech 6 259 obcí s okresem a krajem): npm balíček **text-to-map**
+  (© 2023 Marek Lisý, MIT), soubor `dist/souradnice.csv`, odvozeno z otevřených
+  dat ČSÚ / RÚIAN.
+* **Slovensko a svět**: **GeoNames** (https://www.geonames.org), licence
+  **CC BY 4.0**, získáno přes PyPI balíček **geonamescache** 3.0.2 (MIT):
+  SR z `cities500`, ostatní státy z `cities15000` (města nad 15 000 obyvatel).
+  Názvy krajů (admin1) z npm balíčku **cities.json** (CC BY 4.0, GeoNames).
+* Časová pásma pocházejí z GeoNames, české exonymy (Vídeň, Mnichov…) jsou
+  ručně doplněné v `scripts/build_cities.py`.
+* Nadmořské výšky nejsou v žádném z balíčků k dispozici (viz `docs/VERIFY.md`).
