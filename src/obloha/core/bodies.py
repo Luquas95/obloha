@@ -28,6 +28,10 @@ class BodyInfo:
     radius_km: float
     feminine: bool = False
 
+    @property
+    def color_int(self) -> int:
+        return int(self.color.lstrip("#"), 16)
+
 
 BODIES: tuple[BodyInfo, ...] = (
     BodyInfo("sun", "sun", "Slunce", "☉", "O", "#ffe27a", "sun", 696_000.0),
