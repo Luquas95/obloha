@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --locked
+      - name: Ruff
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Mypy
+        run: uv run mypy
+      - name: Pytest
+        run: uv run pytest --cov --cov-report=term --cov-fail-under=85
+      - name: Core coverage (bez UI)
+        run: uv run coverage report --omit='src/obloha/ui/*,src/obloha/cli.py,src/obloha/web.py' --fail-under=90
+      - name: Upload snapshot report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-report
+          path: snapshot_report.html
+          if-no-files-found: ignore
