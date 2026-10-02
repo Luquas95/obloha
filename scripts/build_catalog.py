@@ -17,6 +17,7 @@ Run: ``uv run python scripts/build_catalog.py``
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import subprocess
 import tarfile
@@ -112,7 +113,7 @@ def build_lines(
         con = abbrs.index(feat["id"])
         for poly in feat["geometry"]["coordinates"]:
             idx = [find(p[0], p[1]) for p in poly]
-            for a, b in zip(idx, idx[1:], strict=False):
+            for a, b in itertools.pairwise(idx):
                 if a != b:
                     pairs_a.append(a)
                     pairs_b.append(b)
@@ -148,7 +149,7 @@ def _edges(rings: list[list[list[float]]]) -> np.ndarray:
     """Return edges (lon1, lat1, lon2, lat2) with the antimeridian jump unwrapped."""
     out = []
     for ring in rings:
-        for a, b in zip(ring, ring[1:], strict=False):
+        for a, b in itertools.pairwise(ring):
             lon1, lat1, lon2, lat2 = a[0], a[1], b[0], b[1]
             d = lon2 - lon1
             if d > 180:
@@ -275,8 +276,11 @@ def main() -> None:
     )
     with (DATA_DIR / "catalog.json").open("w", encoding="utf-8") as fh:
         json.dump(
-            {"source": "d3-celestial (BSD-3-Clause)", "stars": star_meta,
-             "constellations": constellations},
+            {
+                "source": "d3-celestial (BSD-3-Clause)",
+                "stars": star_meta,
+                "constellations": constellations,
+            },
             fh,
             ensure_ascii=False,
             separators=(",", ":"),

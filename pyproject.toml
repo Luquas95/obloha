@@ -80,6 +80,7 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
+filterwarnings = ["ignore:Setting the dtype on a NumPy array:DeprecationWarning"]
 markers = [
     "benchmark: performance tests",
     "ui: textual UI tests",
