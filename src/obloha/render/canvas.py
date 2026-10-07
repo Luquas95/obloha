@@ -105,6 +105,8 @@ class Canvas:
         self.text_bg = np.zeros(shape, dtype=np.uint32)
         self.has_text_bg = np.zeros(shape, dtype=bool)
         self.occupied = np.zeros(shape, dtype=bool)
+        #: plain ASCII glyphs instead of half blocks (". + * # _" by dot priority)
+        self.ascii_glyphs = False
 
     # ------------------------------------------------------------------ dots
     def dots(
@@ -258,7 +260,14 @@ class Canvas:
         chars = self.chars.copy()
         fg = self.fg.copy()
         no_text = chars == 0
-        if self.half:
+        if self.half and self.ascii_glyphs:
+            p = self.dot_prio
+            glyph = np.full_like(chars, ord("."))
+            glyph[p >= -2.5] = ord("+")
+            glyph[p >= -1.0] = ord("*")
+            glyph[(p >= 45) & (p < 55)] = ord("_")
+            glyph[p >= 55] = ord("#")
+        elif self.half:
             glyph = np.zeros_like(chars)
             for bits, ch in HALF_GLYPHS.items():
                 glyph[self.bits == bits] = ord(ch)

@@ -203,6 +203,7 @@ async def test_mobile_touch_buttons():
     app = make_app()
     async with app.run_test(size=(46, 44)) as pilot:
         assert app.is_mobile
+        await pilot.pause()
         await pilot.click("#touch-turn_right")
         assert app.model.win_az == 195
         await pilot.click("#touch-menu")

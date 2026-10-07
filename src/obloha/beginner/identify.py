@@ -13,6 +13,7 @@ from obloha.core.sky import ObjectRef, SkyScene, limiting_magnitude_for_sun
 from obloha.core.textnorm import fold
 
 POINTING_SIGMA = 6.0  # degrees: how precisely people point at the sky
+ALTERNATIVE_MIN = 0.08  # probability needed to mention an alternative
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,10 @@ def identify(
                 continue
             mag = float(cat.mag[i])
             w = _prior(mag) * math.exp(-0.5 * (d / POINTING_SIGMA) ** 2)
-            label = cat.cs_star_names.get(int(i)) or cat.star_designation(int(i))
+            label = cat.cs_star_names.get(int(i))
+            if label is None:
+                con = cat.star_constellation(int(i))
+                label = f"hvězda v souhvězdí {cat.constellation_cs(con)}" if con else "slabá hvězda"
             raw.append((w, ObjectRef.star(int(i)), label, "hvězda", d, mag, True))
         for b in scene.bodies.values():
             if b.alt <= 0 or b.id == "sun" or b.mag > lim + 1:
@@ -138,7 +142,7 @@ def _explain(
     if kind == "planeta":
         col_n = color_word(bv, gender="n")
         return (
-            f"To {col_n} světlo {where}. Je {close}, kam ukazuješ, a je to nejjasnější "
+            f"Je to to {col_n} světlo {where}. Je {close}, kam ukazuješ, a je to nejjasnější "
             "bod v okolí. Nebliká (hvězdy blikají), protože je to planeta."
         )
     bright = "jasná" if mag < 1.5 else "slabší"
@@ -156,14 +160,16 @@ def _alternatives(cands: list[Candidate], moving: bool) -> tuple[str, ...]:
         return ()
     best = cands[0]
     out = []
-    other_star = next((c for c in cands[1:] if c.twinkles), None)
-    other_planet = next((c for c in cands[1:] if not c.twinkles and c.kind == "planeta"), None)
+    # only offer alternatives that are not hopelessly unlikely
+    likely = [c for c in cands[1:] if c.probability >= ALTERNATIVE_MIN]
+    other_star = next((c for c in likely if c.twinkles), None)
+    other_planet = next((c for c in likely if not c.twinkles and c.kind == "planeta"), None)
     if not best.twinkles and other_star:
         out.append(f"Pokud to bliká, je to spíš {other_star.name}.")
     if best.twinkles and other_planet:
         out.append(f"Pokud to nebliká, je to spíš planeta {other_planet.name}.")
-    if best.twinkles and not other_planet and len(cands) > 1:
-        out.append(f"Pokud je to slabší světlo, může to být {cands[1].name}.")
+    if best.twinkles and not other_planet and likely:
+        out.append(f"Pokud je to slabší světlo, může to být {likely[0].name}.")
     return tuple(out)
 
 

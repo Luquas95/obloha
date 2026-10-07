@@ -89,7 +89,7 @@ def test_seasons_2026_2027(prague):
 
 def test_meteor_showers_with_moon(prague):
     ev = meteor_events(datetime(2026, 8, 1, tzinfo=UTC), datetime(2026, 9, 1, tzinfo=UTC), prague)
-    assert [e.title for e in ev] == ["Perseidy (max., ZHR ~100)"]
+    assert [e.title for e in ev] == ["Perseidy (maximum, až ~100 meteorů/h)"]
     # Perseids 2026 peak right after new Moon: no Moon interference
     assert ev[0].extra["moon_factor"] == 1.0
     ev = meteor_events(

@@ -15,6 +15,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
+from obloha.beginner.describe import direction_name, fist_text
 from obloha.beginner.glossary import explain
 from obloha.beginner.identify import Identification, identify, parse_direction
 from obloha.core.bodies import BODIES
@@ -498,13 +499,14 @@ class IdentifyScreen(BaseModal):
         )
         t = model.theme
         lines = [
-            f"[#{t.muted:06x}]Ukazuješ {compass_name(self.az)}, {self.alt:.0f}° nad obzorem.[/]",
+            f"[#{t.muted:06x}]Ukazuješ na {direction_name(self.az)}, {fist_text(self.alt)} "
+            "nad obzor.[/]",
             "",
         ]
         if not self.result.candidates:
             lines.append("Tam teď nic jasného není. Zkus ukázat přesněji nebo napiš směr.")
         for k, c in enumerate(self.result.candidates):
-            pct = f"{c.probability * 100:.0f} %"
+            pct = f"jistota {c.probability * 100:.0f} %"
             if k == 0:
                 sym = "●" if c.kind == "planeta" else "✦" if c.kind == "hvězda" else "▲"
                 lines.append(

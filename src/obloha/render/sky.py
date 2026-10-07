@@ -150,6 +150,7 @@ class SkyRenderer:
         # window view keeps the last row for compass labels
         draw_rows = rows - 1 if self.window else rows
         self.canvas = Canvas(cols, max(1, draw_rows), half=opts.half, bg=self.theme.sky)
+        self.canvas.ascii_glyphs = opts.half and opts.ascii_symbols
         self.proj = make_projection(opts, self.canvas.width, self.canvas.height)
         self.hits: list[Hit] = []
         self.labels: list[tuple[float, str, float, float, int, int, int]] = []
@@ -198,7 +199,7 @@ class SkyRenderer:
             glow = np.exp(-np.clip(alt, 0, 90) / 14.0) * strength
             bg = blend_array(bg, t.sky_glow, glow)
         # milky way
-        if self.opts.layers.milky_way and sun < -10.0:
+        if self.opts.layers.milky_way and sun < -10.0 and not self.canvas.ascii_glyphs:
             mw_alt, mw_az = self.scene.mw
             mx, my, mok = self.project(mw_alt, mw_az)
             mok &= mw_alt > 0
@@ -368,7 +369,7 @@ class SkyRenderer:
             yy = proj.y_of_alt(fist * 10.0)
             row = int(yy // c.sub_y)
             if 0 <= row < row_h:
-                c.text(0, row, f"{fist}┤", t.muted)
+                c.text(0, row, f"{fist}|" if c.ascii_glyphs else f"{fist}┤", t.muted)
         # compass labels in the extra bottom row are produced in finish()
 
     def compass_row(self) -> list[tuple[int, str, bool]]:
@@ -380,7 +381,8 @@ class SkyRenderer:
             if 0 <= x < self.canvas.width:
                 col = int(x // self.canvas.sub_x)
                 name = next((n for a, n in COMPASS if a == step), None)
-                out.append((col, name or "·", name is not None))
+                dot = "." if self.canvas.ascii_glyphs else "·"
+                out.append((col, name or dot, name is not None))
         return out
 
     def star_visibility(self) -> NDArray[np.bool_]:
@@ -637,13 +639,21 @@ class SkyRenderer:
                     (col - len(text) // 2, row - 1),
                     (col - len(text) // 2, row + 1),
                 ]
+            # clamp the candidate positions into the canvas (labels near the edges)
+            options = [(max(0, min(c.cols - len(text), oc)), orow) for oc, orow in options]
             for oc, orow in options:
                 pad_l = 1 if oc > 0 else 0
-                pad_r = 1 if oc + len(text) < c.cols else 0
+                pad_r = min(2, c.cols - oc - len(text))
                 if c.free(oc - pad_l, orow, len(text) + pad_l + pad_r):
                     c.text(oc, orow, text, fg, flags, clear_dots=True)
                     placed += 1
                     break
+            else:
+                if prio >= 150:  # targets of lessons/suggestions must stay labelled
+                    for oc, orow in options:
+                        if c.free(oc, orow, len(text)):
+                            c.text(oc, orow, text, fg, flags, clear_dots=True)
+                            break
 
     def draw_cursor(self) -> None:
         if self.opts.cursor is None:

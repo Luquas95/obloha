@@ -68,8 +68,8 @@ class SkyPane(Vertical):
         with Vertical(id="lesson-box"):
             yield self.lesson_text
             with Horizontal(id="lesson-buttons"):
-                yield Button("✓ našel jsem", id="lesson-found")
-                yield Button("nápověda", id="lesson-hint")
+                yield Button("f ✓ našel jsem", id="lesson-found")
+                yield Button("x poraď mi", id="lesson-hint")
                 yield Button("další úkol", id="lesson-skip")
 
     def render_map(self, cols: int, rows: int) -> RenderResult:

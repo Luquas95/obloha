@@ -150,14 +150,17 @@ class TonightPane(VerticalScroll):
         self.planets.border_title = "PLANETY"
         self.planets.border_subtitle = "seřazeno podle pozorovatelnosti"
         pt = Text(no_wrap=True, overflow="crop")
+        mag_h = "jasnost" if model.beginner else "mag"
+        rate_h = "jak dobře" if model.beginner else "hodn."
         if narrow:
             pt.append(
-                f"{'planeta':<11}{'mag':>5}  {'nejvýš':<11}hodn.\n", Style(color=f"#{t.muted:06x}")
+                f"{'planeta':<11}{mag_h:>7}  {'nejvýš':<11}{rate_h}\n",
+                Style(color=f"#{t.muted:06x}"),
             )
         else:
             pt.append(
-                f"{'planeta':<12}{'mag':>5}   {'souhvězdí':<14}{'nad obzorem (tma)':<19}"
-                f"{'nejvýš':<12}hodn.\n",
+                f"{'planeta':<12}{mag_h:>7}   {'souhvězdí':<14}{'nad obzorem (tma)':<19}"
+                f"{'nejvýš':<12}{rate_h}\n",
                 Style(color=f"#{t.muted:06x}"),
             )
         best = max((p.score for p in data.planets), default=1) or 1
@@ -171,10 +174,10 @@ class TonightPane(VerticalScroll):
             con = model.scene().cat.constellation_cs(p.constellation)
             sym = model.safe(p.info.symbol)
             if narrow:
-                pt.append(f"{sym} {p.info.name:<9}{num(p.mag):>5}  {top:<11}{stars}\n")
+                pt.append(f"{sym} {p.info.name:<9}{num(p.mag):>7}  {top:<11}{stars}\n")
             else:
                 pt.append(
-                    f"{sym} {p.info.name:<10}{num(p.mag):>5}   {con[:13]:<14}"
+                    f"{sym} {p.info.name:<10}{num(p.mag):>7}   {con[:13]:<14}"
                     f"{window:<19}{top:<12}{stars}\n"
                 )
         tip = self._planet_tip()

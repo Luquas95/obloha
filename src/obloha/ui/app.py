@@ -7,11 +7,13 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
+import numpy as np
 from textual import events, work
 from textual.app import App, ComposeResult
 from textual.command import Hit, Hits, Provider
 from textual.containers import Vertical
 from textual.screen import Screen
+from textual.theme import Theme as TextualTheme
 from textual.widgets import ContentSwitcher, OptionList, Static
 from textual.widgets.option_list import Option
 
@@ -50,7 +52,9 @@ NARROW_WIDTH = 100
 
 BEGINNER_TOUCH = [
     ("◀", "turn_left"),
+    ("▲", "look_up"),
     ("?", "identify"),
+    ("▼", "look_down"),
     ("▶", "turn_right"),
     ("úkoly", "lessons"),
     ("≡", "menu"),
@@ -142,6 +146,9 @@ class ObloApp(App[None]):
     TouchBar { display: none; }
     #mobile-hint { display: none; height: auto; color: $ob-muted; padding: 0 1; }
     .-mobile #mobile-hint { display: block; }
+    .-ascii #map-box, .-ascii #side, .-ascii #lesson-box, .-ascii .box, .-ascii .section,
+    .-ascii #sat-table, .-ascii #sat-detail, .-ascii #ev-table, .-ascii #ev-detail {
+        border: ascii $ob-border; }
     .-mobile.-beginner #touch-beginner { display: block; }
     .-mobile.-advanced #touch-advanced { display: block; }
     TouchBar Button { background: $ob-selection; color: $ob-text; border: none; }
@@ -179,6 +186,60 @@ class ObloApp(App[None]):
         self.main = MainScreen()
 
     # ------------------------------------------------------------------ theme
+    def _textual_theme(self) -> TextualTheme:
+        """Textual theme derived from our palette (so built-in widgets follow it)."""
+        t = self.model.theme
+        h = self._hex
+        return TextualTheme(
+            name=f"obloha-{t.name}",
+            primary=h(t.accent if not t.night else t.selection),
+            secondary=h(t.accent2),
+            accent=h(t.accent),
+            foreground=h(t.text),
+            background=h(t.background),
+            surface=h(t.panel),
+            panel=h(t.selection),
+            warning=h(t.highlight),
+            error=h(t.bad),
+            success=h(t.good),
+            boost=h(t.selection),
+            dark=t.name != "světlé",
+            variables={
+                "text-muted": h(t.muted),
+                "link-color": h(t.text),
+                "link-color-hover": h(t.accent),
+                "link-background-hover": h(t.selection),
+                "link-style": "bold",
+                "scrollbar": h(t.border),
+                "scrollbar-hover": h(t.muted),
+                "scrollbar-active": h(t.accent),
+                "scrollbar-background": h(t.panel),
+                "scrollbar-background-hover": h(t.panel),
+                "scrollbar-background-active": h(t.panel),
+                "scrollbar-corner-color": h(t.panel),
+                "button-foreground": h(t.text),
+                "button-color-foreground": h(t.text),
+                "input-cursor-background": h(t.accent),
+                "input-cursor-foreground": h(t.background),
+                "input-selection-background": h(t.selection),
+                "footer-key-foreground": h(t.accent),
+                "block-cursor-background": h(t.selection),
+                "block-cursor-foreground": h(t.text),
+                "block-cursor-text-style": "bold",
+                "block-hover-background": h(t.selection),
+            },
+        )
+
+    def _hex(self, value: int) -> str:
+        if self.model.colors256:
+            value = int(quantize_256(np.array([value], dtype=np.uint32))[0])
+        return int_to_hex(value)
+
+    def activate_theme(self) -> None:
+        theme = self._textual_theme()
+        self.register_theme(theme)
+        self.theme = theme.name
+
     def get_css_variables(self) -> dict[str, str]:
         variables = super().get_css_variables()
         model = getattr(self, "model", None)
@@ -200,19 +261,19 @@ class ObloApp(App[None]):
         }
         for name, value in pairs.items():
             if model.colors256:
-                import numpy as np
-
                 value = int(quantize_256(np.array([value], dtype=np.uint32))[0])
             variables[name] = int_to_hex(value)
         return variables
 
     def apply_theme(self) -> None:
+        self.activate_theme()
         self.refresh_css(animate=False)
         self.update_layout()
         self.refresh_all(full=True)
 
     # ------------------------------------------------------------------ lifecycle
     def on_mount(self) -> None:
+        self.activate_theme()
         self.push_screen(self.main)
         self.update_layout()
         self.refresh_all(full=True)
@@ -245,6 +306,7 @@ class ObloApp(App[None]):
         screen.set_class(self.model.beginner, "-beginner")
         screen.set_class(not self.model.beginner, "-advanced")
         screen.set_class(not self.model.info_panel, "-noinfo")
+        screen.set_class(self.model.ascii, "-ascii")
 
     # ------------------------------------------------------------------ refresh
     @property
@@ -273,6 +335,7 @@ class ObloApp(App[None]):
     def refresh_header(self) -> None:
         model = self.model
         header = self.main.query_one(HeaderBar)
+        header.ascii = model.ascii
         t = model.theme
         header.palette = {
             "border": int_to_hex(t.border),
@@ -305,10 +368,10 @@ class ObloApp(App[None]):
             header.set_content(place, state, [model.safe(x) for x in lines], compact=True)
             return
         if model.beginner:
-            lines = [model.beginner_status(scene)]
+            lines = [model.safe(model.beginner_status(scene))]
         else:
             lines = list(model.advanced_status(scene))
-        header.set_content(place, model.time_text(), lines, compact=False)
+        header.set_content(place, model.safe(model.time_text()), lines, compact=False)
 
     def _short_status(self, scene: Any) -> str:
         from obloha.core.almanac import sky_phase
@@ -350,9 +413,9 @@ class ObloApp(App[None]):
                 "search",
                 "time_pause",
                 "time_forward",
-                "time_faster",
                 "toggle_view",
                 "layer_constellations",
+                "toggle_mode",
                 "night",
                 "quit",
             ]
@@ -369,9 +432,18 @@ class ObloApp(App[None]):
                 "quit",
             ]
         items = km.footer(ctx, ids)
+        mode_label = "pokročilý" if self.model.beginner else "začátečník"
+        items = [(k, mode_label if lbl == "mapa" else lbl) for k, lbl in items]
         if ctx == "sky-beginner":
             items = [("◀▶" if i[0] == "←" else "▲▼" if i[0] == "↑" else i[0], i[1]) for i in items]
+        items = [
+            (self.model.safe(k).replace("◀▶", "<>").replace("▲▼", "^v"), lbl)
+            if self.model.ascii
+            else (k, lbl)
+            for k, lbl in items
+        ]
         bar.show(items, int_to_hex(self.model.theme.accent))
+        bar.display = not self.is_mobile
         hint = self.main.query_one("#mobile-hint", Static)
         if self.is_mobile:
             first = (

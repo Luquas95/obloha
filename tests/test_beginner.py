@@ -147,7 +147,8 @@ def test_identify_saturn(scene):
     assert res.best.ref == ObjectRef.body("saturn")
     assert res.best.probability > 0.5
     assert "nebliká" in res.best.explanation.lower()
-    assert res.alternatives and res.alternatives[0].startswith("Pokud to bliká")
+    # nothing else is comparably likely next to bright Saturn
+    assert res.alternatives == ()
 
 
 def test_identify_between_two_stars(scene):
@@ -165,6 +166,7 @@ def test_identify_between_two_stars(scene):
     names = [c.name for c in res.candidates]
     assert names[:2] == ["Alioth", "Mizar"]
     assert res.candidates[0].probability > res.candidates[1].probability
+    assert res.alternatives == ("Pokud je to slabší světlo, může to být Mizar.",)
 
 
 def test_identify_moving(scene):

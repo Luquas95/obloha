@@ -11,6 +11,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button, Static
 
+BOX_ASCII = str.maketrans("╭╮╰╯─│·▾●◼…", "++++-|-vo#~")
+
 
 def fit(text: str, width: int) -> str:
     """Cut ``text`` to ``width`` cells (with an ellipsis)."""
@@ -41,6 +43,7 @@ class HeaderBar(Widget):
         self.time_text = ""
         self.lines: list[str] = []
         self.compact = False
+        self.ascii = False
         self.palette: dict[str, str] = {}
 
     def set_content(self, place: str, time_text: str, lines: list[str], compact: bool) -> None:
@@ -78,7 +81,7 @@ class HeaderBar(Widget):
             out.append(right, text_st)
             for line in self.lines[:2]:
                 out.append("\n " + fit(line, w - 1), text_st)
-            return out
+            return self._finish(out)
         title = f"─ obloha · {self.place} ▾ "
         right = f" {self.time_text} ╮"
         fill = w - 1 - cell_len(title) - cell_len(right)
@@ -97,6 +100,11 @@ class HeaderBar(Widget):
             out.append(body, text_st if i == 0 else muted)
             out.append(" " * max(0, w - 4 - cell_len(body)) + " │", border)
         out.append("\n╰" + "─" * (w - 2) + "╯", border)
+        return self._finish(out)
+
+    def _finish(self, out: Text) -> Text:
+        if self.ascii:
+            out.plain = out.plain.translate(BOX_ASCII)
         return out
 
     def on_click(self, event: events.Click) -> None:
@@ -131,7 +139,7 @@ class TouchBar(Horizontal):
 
     DEFAULT_CSS = """
     TouchBar { height: 3; width: 1fr; align: center middle; }
-    TouchBar Button { min-width: 7; width: 1fr; height: 3; margin: 0 1; }
+    TouchBar Button { min-width: 4; width: 1fr; height: 3; margin: 0 0 0 1; }
     """
 
     class Pressed(Message):

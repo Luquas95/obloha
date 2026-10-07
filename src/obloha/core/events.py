@@ -96,7 +96,7 @@ def _alt(info: BodyInfo, t: Any, location: Location) -> float:
 def _where_text(alt: float) -> str:
     if alt > 0:
         return f"V tu chvíli je {alt:.0f}° nad obzorem."
-    return f"V tu chvíli je {abs(alt):.0f}° pod obzorem, dívej se nejbližší noc."
+    return f"V tu chvíli je {abs(alt):.0f}° pod obzorem, podívej se příští noc."
 
 
 def moon_phase_events(t0: Any, t1: Any, location: Location) -> list[Event]:
@@ -223,7 +223,9 @@ def _fingers(sep: float) -> str:
         return "méně než šířka malíčku na natažené ruce"
     if sep < 2:
         return "šířka palce na natažené ruce"
-    return f"{sep / 2:.0f} prsty na natažené ruce".replace("1 prsty", "1 prst")
+    n = round(sep / 2)
+    word = "prst" if n == 1 else "prsty" if n < 5 else "prstů"
+    return f"{n} {word} na natažené ruce"
 
 
 def opposition_events(t0: Any, t1: Any, location: Location) -> list[Event]:
@@ -417,7 +419,7 @@ def meteor_events(start: datetime, end: datetime, location: Location) -> list[Ev
                 Event(
                     when,
                     "meteor",
-                    f"{s.name} (max., ZHR ~{s.zhr})",
+                    f"{s.name} (maximum, až ~{s.zhr} meteorů/h)",
                     "☄",
                     f"Maximum meteorického roje {s.name}, mateřské těleso {s.parent}. "
                     f"Za ideálních podmínek až {s.zhr} meteorů za hodinu. {moon_txt} "

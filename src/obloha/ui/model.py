@@ -201,6 +201,16 @@ class AppModel:
     def beginner(self) -> bool:
         return self.mode == "beginner"
 
+    def suggestions(self, scene: SkyScene) -> list[Any]:
+        """ "Co teď uvidíš" for the scene (cached per scene)."""
+        from obloha.beginner.whatsup import suggestions
+
+        key = (scene.when, scene.location, self.beg_limit)
+        if getattr(self, "_sugg_key", None) != key:
+            self._sugg = suggestions(scene, user_limit=self.beg_limit)
+            self._sugg_key = key
+        return self._sugg
+
     def lesson_view(self, scene: SkyScene) -> LessonView | None:
         if not (self.beginner and self.lesson_active and self.lesson.current):
             return None
@@ -213,6 +223,8 @@ class AppModel:
         theme = self.theme
         if self.beginner:
             lv = self.lesson_view(scene)
+            labels = set(lv.labels) if lv else set()
+            labels |= {s.ref for s in self.suggestions(scene)[:3]}
             layers = Layers(
                 constellation_lines=False,
                 labels=True,
@@ -236,7 +248,7 @@ class AppModel:
                 highlights=list(lv.highlights) if lv else [],
                 guides=list(lv.guides) if lv else [],
                 hint_circle=lv.hint_circle if lv else None,
-                always_label=set(lv.labels) if lv else set(),
+                always_label=labels,
                 light_pollution={"město": 0.8, "předměstí": 0.5, "venkov": 0.15}[
                     self.cfg.display.sky_quality
                 ],
@@ -514,16 +526,24 @@ class AppModel:
         moon = scene.bodies["moon"]
         mi = self.moon_now()
         if moon.alt > 0:
+            from obloha.beginner.describe import direction_word
+
             disturb = (
-                "hodně přisvítí"
-                if mi.illumination > 0.7
-                else ("trochu přisvítí" if mi.illumination > 0.3 else "neruší")
+                "hodně přisvítí, slabé hvězdy zmizí"
+                if mi.illumination > 0.5
+                else ("trochu přisvítí" if mi.illumination > 0.25 else "neruší")
             )
-            moon_txt = f"Měsíc je nad obzorem a {disturb}."
+            moon_txt = f"Měsíc je {direction_word(moon.az)} a {disturb}."
         else:
             rs = rise_transit_set(BODY_BY_ID["moon"], self.now(), self.location, hours=14)
             if rs.rise:
-                disturb = "a trochu přisvítí" if mi.illumination > 0.3 else ""
+                disturb = (
+                    "a hodně přisvítí"
+                    if mi.illumination > 0.5
+                    else "a trochu přisvítí"
+                    if mi.illumination > 0.25
+                    else ""
+                )
                 moon_txt = (
                     f"Měsíc vyjde v {hm(rs.rise, self.location.zone)} {disturb}".strip() + "."
                 )

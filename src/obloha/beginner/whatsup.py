@@ -73,11 +73,11 @@ def suggestions(scene: SkyScene, limit: int = 5, user_limit: float = 3.5) -> lis
             Suggestion(
                 ObjectRef.body("moon"),
                 "Měsíc",
-                "Měsíc",
+                "náš souputník",
                 "☽",
                 (
                     position_sentence(moon.alt, moon.az),
-                    f"Osvětlený z {illum} %. " + BODY_FACTS["moon"],
+                    f"Osvětlený na {illum} %. " + BODY_FACTS["moon"],
                 ),
                 100.0 + _altitude_bonus(moon.alt),
                 moon.alt,
@@ -144,8 +144,7 @@ def suggestions(scene: SkyScene, limit: int = 5, user_limit: float = 3.5) -> lis
             ref = ObjectRef("asterism", a.id)
             pos = scene.altaz_of(ref)
             assert pos is not None
-            names = ", ".join(cat.star_label(s) for s in a.stars[:3])
-            second = f"Hvězdy {names}." if len(a.stars) <= 3 else position_sentence(*pos)
+            second = position_sentence(*pos)
             asterism_sent = (a.text, second)
             ease = 58.0 + _altitude_bonus(float(alts.mean())) - 2.0 * len(a.stars)
             out.append(Suggestion(ref, a.name, "obrazec", "◌", asterism_sent, ease, pos[0], pos[1]))

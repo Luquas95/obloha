@@ -152,7 +152,7 @@ def _triangle_build(scene: SkyScene, level: int) -> LessonView:
     v_alt, v_az = _pos(scene, vega)
     d_alt, d_az = _pos(scene, deneb)
     steps = [
-        f"1. Podívej se {direction_word(a_az)} a zvedni pohled {fist_text(a_alt)}: najdeš "
+        f"1. Podívej se na {direction_name(a_az)} a zvedni pohled {fist_text(a_alt)}: najdeš "
         "Altair (s dvěma slabšími sousedy).",
         f"2. {direction_word(v_az).capitalize()}, {fist_text(v_alt)} nad obzorem: nejjasnější "
         "je Vega.",
@@ -253,7 +253,7 @@ def _pleiades_build(scene: SkyScene, level: int) -> LessonView:
     m45 = ObjectRef("dso", "M45")
     alt, az = _pos(scene, m45)
     steps = [
-        f"1. Podívej se {direction_word(az)}, {fist_text(alt)} nad obzor.",
+        f"1. Podívej se na {direction_name(az)}, {fist_text(alt)} nad obzor.",
         "2. Hledej malý shluk hvězd jako mlhavou skvrnku, menší než pěst.",
         "3. Když se podíváš kousek vedle (koutkem oka), uvidíš víc hvězd. To jsou Plejády.",
     ]
@@ -271,7 +271,7 @@ def _orion_build(scene: SkyScene, level: int) -> LessonView:
     steps = [
         f"1. {direction_word(az).capitalize()}, {fist_text(alt)} nad obzorem hledej tři "
         "stejně jasné hvězdy v řadě: Orionův pás.",
-        "2. Nad pásem je oranžová Betelgeuze, pod ním modrobílý Rigel.",
+        "2. Na jedné straně pásu je oranžová Betelgeuze, na druhé modrobílý Rigel.",
     ]
     return _finish(
         scene,

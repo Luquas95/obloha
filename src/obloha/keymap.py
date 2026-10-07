@@ -298,6 +298,13 @@ class Keymap:
         keys = self.actions[action_id].keys
         return display_key(keys[0]) if keys else ""
 
+    def label_in(self, action_id: str, context: str) -> str:
+        """First key of an action that really triggers it in ``context`` (not shadowed)."""
+        for k in self.actions[action_id].keys:
+            if self.action_for(k, context) == action_id:
+                return display_key(k)
+        return ""
+
     def footer(self, context: str, ids: Iterable[str] | None = None) -> list[tuple[str, str]]:
         """(key label, short description) pairs for the footer of ``context``."""
         wanted = list(ids) if ids is not None else None
@@ -307,9 +314,9 @@ class Keymap:
         if wanted is not None:
             pool = [self.actions[i] for i in wanted if i in self.actions]
         for a in pool:
-            if not a.keys:
-                continue
-            out.append((display_key(a.keys[0]), a.footer or a.description))
+            key = self.label_in(a.id, context)
+            if key:
+                out.append((key, a.footer or a.description))
         return out
 
     def help_rows(self) -> list[tuple[str, str, str]]:
