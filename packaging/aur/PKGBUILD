@@ -1,0 +1,46 @@
+# Maintainer: obloha contributors
+pkgname=obloha
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Terminálové planetárium: co je právě teď na obloze (TUI, Textual + Skyfield)"
+arch=('any')
+url="https://github.com/luquas95/obloha"
+license=('MIT')
+depends=(
+  'python>=3.12'
+  'python-numpy'
+  'python-skyfield'
+  'python-textual'
+  'python-httpx'
+  'python-pydantic'
+  'python-tomlkit'
+  'python-tzdata'
+)
+# skyfield-data (DE421) is not packaged in Arch; it is vendored from PyPI below
+makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-pip')
+optdepends=(
+  'python-timezonefinder: časové pásmo pro ručně zadané souřadnice'
+  'python-textual-serve: obloha --web (rozhraní v prohlížeči)'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
+        "https://files.pythonhosted.org/packages/py2.py3/s/skyfield-data/skyfield_data-7.0.0-py2.py3-none-any.whl")
+noextract=("skyfield_data-7.0.0-py2.py3-none-any.whl")
+sha256sums=('SKIP' 'SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  PYTHONPATH=src python -c "import obloha.core.catalog as c; assert len(c.catalog()) > 5000"
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  python -m installer --destdir="$pkgdir" "$srcdir/skyfield_data-7.0.0-py2.py3-none-any.whl"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 src/obloha/data/LICENSES.md "$pkgdir/usr/share/licenses/$pkgname/DATA-LICENSES.md"
+}
