@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 class SkyPane(Vertical):
     """Map + side panel + lesson box."""
 
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     SkyPane { height: 1fr; }
     SkyPane #sky-body { height: 1fr; }
@@ -49,7 +50,7 @@ class SkyPane(Vertical):
 
     def __init__(self) -> None:
         super().__init__(id="sky-pane")
-        self.map = SkyMap(self._render, id="skymap")
+        self.map = SkyMap(self.render_map, id="skymap")
         self.side = Static(id="side-content")
         self.lesson_text = Static(id="lesson-text")
         self.last_result: RenderResult | None = None
@@ -71,7 +72,7 @@ class SkyPane(Vertical):
                 yield Button("nápověda", id="lesson-hint")
                 yield Button("další úkol", id="lesson-skip")
 
-    def _render(self, cols: int, rows: int) -> RenderResult:
+    def render_map(self, cols: int, rows: int) -> RenderResult:
         model = self.oapp.model
         scene = model.scene()
         opts = model.view_options(scene)
@@ -115,12 +116,15 @@ class SkyPane(Vertical):
     def _beginner_side(self) -> str:
         model = self.oapp.model
         scene = model.scene()
-        items = suggestions(scene, limit=5 if not self.oapp.is_mobile else 3,
-                            user_limit=model.beg_limit)
+        items = suggestions(
+            scene, limit=5 if not self.oapp.is_mobile else 3, user_limit=model.beg_limit
+        )
         t = model.theme
         if not items:
-            return ("[b]Teď není moc co vidět.[/b]\n\nJe den nebo světlá obloha. "
-                    "Zkus to po setmění, nebo posuň čas klávesou [b].[/b]")
+            return (
+                "[b]Teď není moc co vidět.[/b]\n\nJe den nebo světlá obloha. "
+                "Zkus to po setmění, nebo posuň čas klávesou [b].[/b]"
+            )
         lines = []
         for k, s in enumerate(items):
             sel = model.selected == s.ref
@@ -164,8 +168,9 @@ class SkyPane(Vertical):
                 lines.append(f"RA / Dec     {num(info.ra)}° / {num(info.dec)}°")
             if info.distance_au is not None:
                 if ref and ref.key == "moon":
-                    lines.append(f"vzdálenost   {info.distance_au * 149_597_870:,.0f} km"
-                                 .replace(",", " "))
+                    lines.append(
+                        f"vzdálenost   {info.distance_au * 149_597_870:,.0f} km".replace(",", " ")
+                    )
                 else:
                     lines.append(f"vzdálenost   ≈ {num(info.distance_au)} au")
             rs = self.oapp.rise_set_cached(ref) if ref else None
@@ -178,8 +183,9 @@ class SkyPane(Vertical):
                 else:
                     lines.append(f"vychází      {hm(rs.rise, zone)}")
                     if rs.transit:
-                        lines.append(f"kulminuje    {hm(rs.transit, zone)} · "
-                                     f"{(rs.transit_alt or 0):.0f}°")
+                        lines.append(
+                            f"kulminuje    {hm(rs.transit, zone)} · {(rs.transit_alt or 0):.0f}°"
+                        )
                     lines.append(f"zapadá       {hm(rs.set, zone)}")
             if info.text:
                 lines.append("")
@@ -199,8 +205,10 @@ class SkyPane(Vertical):
                 lines.append(f"☽ vychází v {hm(mrs.rise, model.display_zone)}")
         nxt = self.oapp.next_visible_pass()
         if nxt is not None:
-            mag = f" ({num(nxt.mag)} mag)" if nxt.mag is not None else ""
-            lines.append(f"▲ {escape(nxt.name)} přelet {hm(nxt.peak.when, model.display_zone)}{mag}")
+            pass_mag = f" ({num(nxt.mag)} mag)" if nxt.mag is not None else ""
+            lines.append(
+                f"▲ {escape(nxt.name)} přelet {hm(nxt.peak.when, model.display_zone)}{pass_mag}"
+            )
         if model.message:
             lines.append("")
             lines.append(f"[#{t.highlight:06x}]{escape(model.message)}[/]")
@@ -214,8 +222,7 @@ class SkyPane(Vertical):
                 out.append((b.name, b.mag, b.alt, b.info.symbol))
         for i in cat.named_stars[:60]:
             if scene.star_alt[i] > 0 and i in cat.cs_star_names:
-                out.append((cat.cs_star_names[i], float(cat.mag[i]), float(scene.star_alt[i]),
-                            "✦"))
+                out.append((cat.cs_star_names[i], float(cat.mag[i]), float(scene.star_alt[i]), "✦"))
         out.sort(key=lambda r: r[1])
         return out[:8]
 

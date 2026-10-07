@@ -22,12 +22,13 @@ if TYPE_CHECKING:
 
 
 class TonightPane(VerticalScroll):
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     TonightPane { height: 1fr; }
     TonightPane .box { border: round $ob-border; border-title-color: $ob-accent;
         border-title-style: bold; padding: 0 1; height: auto; }
     TonightPane #tonight-row1, TonightPane #tonight-row2 { height: auto; }
-    TonightPane #sunmoon { width: 42; }
+    TonightPane #sunmoon { width: 50; }
     TonightPane #planets { width: 1fr; }
     TonightPane #events30 { width: 1fr; }
     TonightPane #passes { width: 1fr; }
@@ -72,10 +73,16 @@ class TonightPane(VerticalScroll):
         self.timeline.border_subtitle = model.location.name
         # ---------------------------------------------------------------- timeline
         width = max(20, (self.size.width or 100) - 18)
-        bodies = [BODY_BY_ID["moon"]] + [p.info for p in data.planets if p.observable][:4]
+        bodies = [BODY_BY_ID["moon"], *[p.info for p in data.planets if p.observable][:4]]
         scores = [(s.when, s.score) for s in data.scores]
-        tl = night_timeline(start - timedelta(minutes=30), end + timedelta(minutes=30),
-                            model.location, width, bodies, scores)
+        tl = night_timeline(
+            start - timedelta(minutes=30),
+            end + timedelta(minutes=30),
+            model.location,
+            width,
+            bodies,
+            scores,
+        )
         text = Text(no_wrap=True, overflow="crop")
         axis = [" "] * tl.columns
         nowc = now_column(tl, model.now())
@@ -92,8 +99,10 @@ class TonightPane(VerticalScroll):
             text.append(row.cells + "\n", Style(color=color))
         if data.window:
             a, b = data.window
-            text.append(f"nejlepší okno: {hm(a, zone)}–{hm(b, zone)} · skóre až "
-                        f"{data.best_score} · ", Style(color=f"#{t.good:06x}"))
+            text.append(
+                f"nejlepší okno: {hm(a, zone)}–{hm(b, zone)} · skóre až {data.best_score} · ",
+                Style(color=f"#{t.good:06x}"),
+            )
         else:
             text.append("dnes v noci žádné dobré okno · ", Style(color=f"#{t.bad:06x}"))
         text.append(data.weather_status, Style(color=f"#{t.muted:06x}"))
@@ -113,8 +122,16 @@ class TonightPane(VerticalScroll):
             sm.append(f"{label:<28}{value:>9}\n")
         sm.append("\n")
         mi = data.moon
-        disc = moon_disc(mi.illumination, mi.waxing, 9, 4, lit=t.moon, dark=t.suppressed,
-                         bg=t.panel, half=model.ascii)
+        disc = moon_disc(
+            mi.illumination,
+            mi.waxing,
+            9,
+            4,
+            lit=t.moon,
+            dark=t.suppressed,
+            bg=t.panel,
+            half=model.ascii,
+        )
         if model.night:
             disc = disc.converted(night=True)
         info = [
@@ -134,11 +151,15 @@ class TonightPane(VerticalScroll):
         self.planets.border_subtitle = "seřazeno podle pozorovatelnosti"
         pt = Text(no_wrap=True, overflow="crop")
         if narrow:
-            pt.append(f"{'planeta':<11}{'mag':>5}  {'nejvýš':<11}hodn.\n",
-                      Style(color=f"#{t.muted:06x}"))
+            pt.append(
+                f"{'planeta':<11}{'mag':>5}  {'nejvýš':<11}hodn.\n", Style(color=f"#{t.muted:06x}")
+            )
         else:
-            pt.append(f"{'planeta':<12}{'mag':>5}   {'souhvězdí':<14}{'nad obzorem (tma)':<19}"
-                      f"{'nejvýš':<12}hodnocení\n", Style(color=f"#{t.muted:06x}"))
+            pt.append(
+                f"{'planeta':<12}{'mag':>5}   {'souhvězdí':<14}{'nad obzorem (tma)':<19}"
+                f"{'nejvýš':<12}hodn.\n",
+                Style(color=f"#{t.muted:06x}"),
+            )
         best = max((p.score for p in data.planets), default=1) or 1
         for p in data.planets:
             stars = bar(p.score / best, 5)
@@ -151,8 +172,10 @@ class TonightPane(VerticalScroll):
             if narrow:
                 pt.append(f"{p.info.symbol} {p.info.name:<9}{num(p.mag):>5}  {top:<11}{stars}\n")
             else:
-                pt.append(f"{p.info.symbol} {p.info.name:<10}{num(p.mag):>5}   {con[:13]:<14}"
-                          f"{window:<19}{top:<12}{stars}\n")
+                pt.append(
+                    f"{p.info.symbol} {p.info.name:<10}{num(p.mag):>5}   {con[:13]:<14}"
+                    f"{window:<19}{top:<12}{stars}\n"
+                )
         tip = self._planet_tip()
         if tip:
             pt.append("\n" + tip, Style(color=f"#{t.accent2:06x}"))
@@ -168,28 +191,35 @@ class TonightPane(VerticalScroll):
             shown = [e for e in events if e.when <= limit and e.kind != "perigee"][:9]
             for e in shown:
                 et.append(f"{date_short(e.when, zone):<8}{e.symbol} {escape(e.title)}\n")
-            et.append("\n↵ detail · j skočit na čas úkazu (obrazovka 4)",
-                      Style(color=f"#{t.muted:06x}"))
+            et.append(
+                "\n↵ detail · j skočit na čas úkazu (obrazovka 4)", Style(color=f"#{t.muted:06x}")
+            )
         self.events30.update(et)
         self.passes.border_title = "▲ PŘELETY ISS · viditelné"
         ps = Text(no_wrap=True, overflow="crop")
         passes = [p for p in self.oapp.passes_if_ready() or [] if p.visible][:6]
         if passes:
-            ps.append(f"{'datum':<9}{'začátek':<10}{'nejvýš':<14}{'konec':<12}jasnost\n",
-                      Style(color=f"#{t.muted:06x}"))
+            ps.append(
+                f"{'datum':<9}{'začátek':<10}{'nejvýš':<14}{'konec':<12}jasnost\n",
+                Style(color=f"#{t.muted:06x}"),
+            )
             from obloha.render.sky import compass_name
 
-            for p in passes:
-                mag = num(p.mag) if p.mag is not None else "—"
+            for sp in passes:
+                mag = num(sp.mag) if sp.mag is not None else "—"
                 ps.append(
-                    f"{date_short(p.rise.when, zone):<9}"
-                    f"{hm(p.rise.when, zone)} {compass_name(p.rise.az):<4}"
-                    f"{hm(p.peak.when, zone)} {p.peak.alt:>3.0f}°    "
-                    f"{hm(p.set.when, zone)} {compass_name(p.set.az):<5}{mag:>6}\n"
+                    f"{date_short(sp.rise.when, zone):<9}"
+                    f"{hm(sp.rise.when, zone)} {compass_name(sp.rise.az):<4}"
+                    f"{hm(sp.peak.when, zone)} {sp.peak.alt:>3.0f}°    "
+                    f"{hm(sp.set.when, zone)} {compass_name(sp.set.az):<5}{mag:>6}\n"
                 )
         else:
-            ps.append("žádné viditelné přelety v příštích 7 dnech\n" if model.sats else
-                      "dráhy satelitů nejsou k dispozici\n", Style(color=f"#{t.muted:06x}"))
+            ps.append(
+                "žádné viditelné přelety v příštích 7 dnech\n"
+                if model.sats
+                else "dráhy satelitů nejsou k dispozici\n",
+                Style(color=f"#{t.muted:06x}"),
+            )
         ps.append(f"\ndráhy z CelesTraku · {model.sat_status}", Style(color=f"#{t.muted:06x}"))
         warn = model.sat_age_warning()
         if warn:

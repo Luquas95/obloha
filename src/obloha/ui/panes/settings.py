@@ -27,6 +27,7 @@ LAYER_LABELS = {
 
 
 class SettingsPane(VerticalScroll):
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     SettingsPane { height: 1fr; padding: 0 1; }
     SettingsPane .section { border: round $ob-border; border-title-color: $ob-accent;
@@ -65,28 +66,46 @@ class SettingsPane(VerticalScroll):
             v.border_title = "ZOBRAZENÍ"
             with Horizontal(classes="row"):
                 yield Label("téma")
-                yield Select([("tmavé", "dark"), ("světlé", "light")], value=cfg.display.theme,
-                             allow_blank=False, id="set-theme")
+                yield Select(
+                    [("tmavé", "dark"), ("světlé", "light")],
+                    value=cfg.display.theme,
+                    allow_blank=False,
+                    id="set-theme",
+                )
             with Horizontal(classes="row"):
                 yield Label("noční vidění (n)")
                 yield Switch(value=model.night, id="set-night")
             with Horizontal(classes="row"):
                 yield Label("kde pozoruješ (mez. magnituda)")
-                yield Select([("město (3,5)", "město"), ("předměstí (4,8)", "předměstí"),
-                              ("venkov (6,0)", "venkov")], value=cfg.display.sky_quality,
-                             allow_blank=False, id="set-quality")
+                yield Select(
+                    [
+                        ("město (3,5)", "město"),
+                        ("předměstí (4,8)", "předměstí"),
+                        ("venkov (6,0)", "venkov"),
+                    ],
+                    value=cfg.display.sky_quality,
+                    allow_blank=False,
+                    id="set-quality",
+                )
             with Horizontal(classes="row"):
                 yield Label("mezní magnituda mapy")
                 yield Input(str(cfg.display.limiting_mag), id="set-limit", type="number")
             with Horizontal(classes="row"):
                 yield Label("jednotky RA/Dec")
-                yield Select([("stupně (°)", "deg"), ("hodiny a minuty (h:m)", "hm")],
-                             value=cfg.display.units, allow_blank=False, id="set-units")
+                yield Select(
+                    [("stupně (°)", "deg"), ("hodiny a minuty (h:m)", "hm")],
+                    value=cfg.display.units,
+                    allow_blank=False,
+                    id="set-units",
+                )
             with Horizontal(classes="row"):
                 yield Label("čas v záhlaví")
-                yield Select([("pásmo zvoleného místa", "place"), ("můj čas (pozorovatel)",
-                              "observer")], value=cfg.display.time_zone, allow_blank=False,
-                             id="set-tz")
+                yield Select(
+                    [("pásmo zvoleného místa", "place"), ("můj čas (pozorovatel)", "observer")],
+                    value=cfg.display.time_zone,
+                    allow_blank=False,
+                    id="set-tz",
+                )
             with Horizontal(classes="row"):
                 yield Label("bezpečný režim znaků")
                 yield Switch(value=model.ascii, id="set-ascii")
@@ -97,8 +116,7 @@ class SettingsPane(VerticalScroll):
             v.border_title = "VRSTVY MAPY (pokročilý režim)"
             with Vertical(id="layers"):
                 for key, label in LAYER_LABELS.items():
-                    yield Checkbox(label, value=bool(getattr(model.layers, key)),
-                                   id=f"layer-{key}")
+                    yield Checkbox(label, value=bool(getattr(model.layers, key)), id=f"layer-{key}")
         with Vertical(classes="section") as v:
             v.border_title = "SATELITY"
             with Horizontal(classes="row"):
@@ -123,10 +141,13 @@ class SettingsPane(VerticalScroll):
         model = self.oapp.model
         t = model.theme
         loc = model.location
-        lines = [f"[b]aktuální:[/b] {escape(loc.name)}"
-                 + (f", {escape(loc.label)}" if loc.label else "")
-                 + f"  [#{t.muted:06x}]{loc.coords_text()} · {loc.tz}[/]",
-                 f"[#{t.muted:06x}]výchozí: {escape(model.cfg.location.name)}[/]", ""]
+        lines = [
+            f"[b]aktuální:[/b] {escape(loc.name)}"
+            + (f", {escape(loc.label)}" if loc.label else "")
+            + f"  [#{t.muted:06x}]{loc.coords_text()} · {loc.tz}[/]",
+            f"[#{t.muted:06x}]výchozí: {escape(model.cfg.location.name)}[/]",
+            "",
+        ]
         if model.cfg.favorites:
             lines.append("[b]oblíbená:[/b]")
             for i, p in enumerate(model.cfg.favorites):
@@ -136,7 +157,9 @@ class SettingsPane(VerticalScroll):
                     + f"  [@click=app.remove_favorite({i})][#{t.bad:06x}]✕ odebrat[/][/]"
                 )
         else:
-            lines.append(f"[#{t.muted:06x}]Žádná oblíbená místa. Přidej aktuální tlačítkem níže.[/]")
+            lines.append(
+                f"[#{t.muted:06x}]Žádná oblíbená místa. Přidej aktuální tlačítkem níže.[/]"
+            )
         self.places.update("\n".join(lines))
 
     # ------------------------------------------------------------------ events

@@ -210,7 +210,7 @@ class SkyRenderer:
                 # fill small gaps between sample points
                 level = np.maximum(level, _dilate(level) * 0.8)
                 dark = float(np.clip((-sun - 10.0) / 8.0, 0.0, 1.0))
-                mw_strength = (1.0 - 0.6 * self.opts.light_pollution) * dark
+                mw_strength = 0.6 * (1.0 - 0.6 * self.opts.light_pollution) * dark
                 bg = blend_array(bg, blend(t.milky_way, 0x3A4A78, 0.4), level / 5.0 * mw_strength)
         below = alt < 0
         if self.window:
@@ -342,7 +342,7 @@ class SkyRenderer:
             return
         xs = np.arange(c.width, dtype=np.float64)
         _, az, _ = proj.inverse(xs, np.zeros_like(xs))
-        heights = _roof_heights(az) / proj.degrees_per_dot()  # in dots
+        heights = _roof_heights(az) / proj.vertical_degrees_per_dot()  # in dots
         # ground below the horizon is solid, labels must not go there
         row_h = int(y_h // c.sub_y)
         for r in range(max(row_h + 1, 0), c.rows):
@@ -357,11 +357,10 @@ class SkyRenderer:
             if h <= 0.5:
                 continue
             top = round(y_h - h)
-            bottom = (row_h + 1) * c.sub_y
-            ys = np.arange(max(top, 0), min(bottom, c.height), dtype=np.float64)
+            ys = np.arange(max(top, 0), min(int(y_h) + 1, c.height), dtype=np.float64)
             c.dots(np.full_like(ys, xi), ys, roof_color, 60)
         if 0 <= row_h < c.rows:
-            c.occupied[row_h, :] |= c.bits[row_h, :] == 0xFF
+            c.occupied[row_h, :] = True
         # fist scale on the left edge
         for fist in range(1, 10):
             yy = proj.y_of_alt(fist * 10.0)

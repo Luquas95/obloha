@@ -15,9 +15,16 @@ from obloha.render.canvas import Canvas, Frame
 SPARK = " ▁▂▃▄▅▆▇█"
 
 
-def moon_disc(illumination: float, waxing: bool, cols: int = 8, rows: int = 4,
-              lit: int = 0xF4F1E0, dark: int = 0x2F3A55, bg: int = 0x0D1222,
-              half: bool = False) -> Frame:
+def moon_disc(
+    illumination: float,
+    waxing: bool,
+    cols: int = 8,
+    rows: int = 4,
+    lit: int = 0xF4F1E0,
+    dark: int = 0x2F3A55,
+    bg: int = 0x0D1222,
+    half: bool = False,
+) -> Frame:
     """Moon disc: lit part bright, the rest dim (northern hemisphere orientation)."""
     c = Canvas(cols, rows, half=half, bg=bg)
     w, h = c.width, c.height
@@ -66,8 +73,12 @@ def _hour_marks(start: datetime, step: timedelta, cols: int, zone: object) -> li
 
 
 def night_timeline(
-    start: datetime, end: datetime, location: Location, columns: int,
-    bodies: list[BodyInfo] | None = None, scores: list[tuple[datetime, int]] | None = None,
+    start: datetime,
+    end: datetime,
+    location: Location,
+    columns: int,
+    bodies: list[BodyInfo] | None = None,
+    scores: list[tuple[datetime, int]] | None = None,
 ) -> Timeline:
     """Columns from ``start`` to ``end``: sky darkness, bodies above horizon, score."""
     columns = max(10, columns)

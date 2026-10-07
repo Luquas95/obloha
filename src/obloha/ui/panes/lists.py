@@ -35,6 +35,7 @@ def glossary_markup(text: str, color: str) -> str:
 
 
 class SatellitesPane(Vertical):
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     SatellitesPane { height: 1fr; }
     SatellitesPane #sat-body { height: 1fr; }
@@ -49,7 +50,9 @@ class SatellitesPane(Vertical):
 
     def __init__(self) -> None:
         super().__init__(id="satellites-pane")
-        self.table: DataTable[str] = DataTable(id="sat-table", cursor_type="row", zebra_stripes=True)
+        self.table: DataTable[str] = DataTable(
+            id="sat-table", cursor_type="row", zebra_stripes=True
+        )
         self.detail = Static(id="sat-detail")
         self.status = Static(id="sat-status")
         self.passes: list[SatPass] = []
@@ -86,20 +89,28 @@ class SatellitesPane(Vertical):
         if compact:
             self.table.add_columns("datum", "nejvýš", "vid.", "mag")
         else:
-            self.table.add_columns("satelit", "datum", "začátek", "nejvýš", "konec", "viditelný",
-                                   "jasnost")
+            self.table.add_columns(
+                "satelit", "datum", "začátek", "nejvýš", "konec", "viditelný", "jasnost"
+            )
         for p in passes:
             vis = "ano" if p.visible else "ne"
             mag = num(p.mag) if p.mag is not None else "—"
             if compact:
-                self.table.add_row(f"{date_short(p.rise.when, zone)} {p.name[:6]}",
-                                   f"{hm(p.peak.when, zone)} {p.peak.alt:.0f}°", vis, mag)
+                self.table.add_row(
+                    f"{date_short(p.rise.when, zone)} {p.name[:6]}",
+                    f"{hm(p.peak.when, zone)} {p.peak.alt:.0f}°",
+                    vis,
+                    mag,
+                )
             else:
                 self.table.add_row(
-                    p.name[:14], date_short(p.rise.when, zone),
+                    p.name[:14],
+                    date_short(p.rise.when, zone),
                     f"{hm(p.rise.when, zone)} {compass_name(p.rise.az)}",
                     f"{hm(p.peak.when, zone)} {p.peak.alt:.0f}°",
-                    f"{hm(p.set.when, zone)} {compass_name(p.set.az)}", vis, mag,
+                    f"{hm(p.set.when, zone)} {compass_name(p.set.az)}",
+                    vis,
+                    mag,
                 )
         if not passes:
             self.detail.update("Žádné přelety. Zkontroluj, že jsou stažené dráhy (Nastavení).")
@@ -120,20 +131,27 @@ class SatellitesPane(Vertical):
         self.detail.border_title = f"▲ {p.name}"
         text = Text()
         text.append(f"{date_short(p.rise.when, zone)} {p.rise.when.astimezone(zone).year}\n")
-        text.append(f"začátek  {hm(p.rise.when, zone)}  {compass_name(p.rise.az):<3} "
-                    f"{p.rise.alt:.0f}°\n")
-        text.append(f"nejvýš   {hm(p.peak.when, zone)}  {compass_name(p.peak.az):<3} "
-                    f"{p.peak.alt:.0f}°\n")
-        text.append(f"konec    {hm(p.set.when, zone)}  {compass_name(p.set.az):<3} "
-                    f"{p.set.alt:.0f}°\n")
+        text.append(
+            f"začátek  {hm(p.rise.when, zone)}  {compass_name(p.rise.az):<3} {p.rise.alt:.0f}°\n"
+        )
+        text.append(
+            f"nejvýš   {hm(p.peak.when, zone)}  {compass_name(p.peak.az):<3} {p.peak.alt:.0f}°\n"
+        )
+        text.append(
+            f"konec    {hm(p.set.when, zone)}  {compass_name(p.set.az):<3} {p.set.alt:.0f}°\n"
+        )
         if p.visible and p.visible_from and p.visible_to:
-            text.append(f"\nviditelný {hm(p.visible_from, zone)}–{hm(p.visible_to, zone)}"
-                        " (osvětlený Sluncem, u tebe tma)\n", f"#{t.good:06x}")
+            text.append(
+                f"\nviditelný {hm(p.visible_from, zone)}–{hm(p.visible_to, zone)}"
+                " (osvětlený Sluncem, u tebe tma)\n",
+                f"#{t.good:06x}",
+            )
             if p.mag is not None:
                 text.append(f"nejvyšší jasnost {num(p.mag)} mag\n")
         else:
-            text.append("\nneviditelný: družice je ve stínu Země nebo je u tebe světlo\n",
-                        f"#{t.muted:06x}")
+            text.append(
+                "\nneviditelný: družice je ve stínu Země nebo je u tebe světlo\n", f"#{t.muted:06x}"
+            )
         # mini sky map with the track
         c = Canvas(18, 8, half=model.ascii, bg=t.panel)
         from obloha.core.projection import FullSky
@@ -157,6 +175,7 @@ class SatellitesPane(Vertical):
 
 
 class EventsPane(Vertical):
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     EventsPane { height: 1fr; }
     EventsPane #ev-filter { height: auto; padding: 0 1; }
@@ -212,7 +231,7 @@ class EventsPane(Vertical):
     def refresh_content(self, full: bool = False) -> None:
         model = self.oapp.model
         t = model.theme
-        parts = [f"[@click=app.event_kind('all')][b]filtr:[/b][/] "]
+        parts = ["[@click=app.event_kind('all')][b]filtr:[/b][/] "]
         for key, label in EVENT_KINDS.items():
             on = key in self.kinds
             color = f"#{t.accent:06x}" if on else f"#{t.suppressed:06x}"
@@ -222,7 +241,8 @@ class EventsPane(Vertical):
         events = self.oapp.events_if_ready()
         months = model.cfg.events.months
         self.table.border_title = f"ÚKAZY · příští {months} " + (
-            "měsíce" if 2 <= months <= 4 else "měsíc" if months == 1 else "měsíců")
+            "měsíce" if 2 <= months <= 4 else "měsíc" if months == 1 else "měsíců"
+        )
         if events is None:
             self.detail.update("počítám úkazy…")
             return
@@ -280,6 +300,8 @@ class EventsPane(Vertical):
         ]
         if e.altitude is not None and e.kind not in ("eclipse",):
             lines += ["", f"Výška nad obzorem v tu chvíli: {e.altitude:.0f}°"]
-        lines += ["", f"[#{t.muted:06x}]j skočit na čas úkazu · podtržené pojmy vysvětlí "
-                  "klepnutí[/]"]
+        lines += [
+            "",
+            f"[#{t.muted:06x}]j skočit na čas úkazu · podtržené pojmy vysvětlí klepnutí[/]",
+        ]
         self.detail.update("\n".join(lines))

@@ -90,8 +90,8 @@ class AppModel:
         self.st = state
         self.persist = persist
         self.location = location or config.location.to_location()
-        self.time = TimeController.fixed(fixed_time, clock) if fixed_time else TimeController(
-            clock=clock
+        self.time = (
+            TimeController.fixed(fixed_time, clock) if fixed_time else TimeController(clock=clock)
         )
         self.mode = config.display.mode
         self.night = config.display.night
@@ -180,13 +180,24 @@ class AppModel:
         if self.beginner:
             lv = self.lesson_view(scene)
             layers = Layers(
-                constellation_lines=False, labels=True, milky_way=self.layers.milky_way,
-                asterisms=True, satellites=self.layers.satellites, deep_sky=True,
+                constellation_lines=False,
+                labels=True,
+                milky_way=self.layers.milky_way,
+                asterisms=True,
+                satellites=self.layers.satellites,
+                deep_sky=True,
             )
             return ViewOptions(
-                kind="window", center_az=self.win_az, fov=self.win_fov,
-                bottom_alt=self.win_bottom, limiting_mag=self.beg_limit, theme=theme,
-                half=self.ascii, ascii_symbols=self.ascii, beginner=True, max_labels=6,
+                kind="window",
+                center_az=self.win_az,
+                fov=self.win_fov,
+                bottom_alt=self.win_bottom,
+                limiting_mag=self.beg_limit,
+                theme=theme,
+                half=self.ascii,
+                ascii_symbols=self.ascii,
+                beginner=True,
+                max_labels=6,
                 selected=self.selected,
                 highlights=list(lv.highlights) if lv else [],
                 guides=list(lv.guides) if lv else [],
@@ -199,9 +210,15 @@ class AppModel:
             )
         return ViewOptions(
             kind="full" if self.adv_view == "full" else "direction",
-            center_az=self.dir_az, center_alt=self.dir_alt, fov=self.dir_fov,
-            limiting_mag=self.adv_limit, theme=theme, half=self.ascii,
-            ascii_symbols=self.ascii, beginner=False, selected=self.selected,
+            center_az=self.dir_az,
+            center_alt=self.dir_alt,
+            fov=self.dir_fov,
+            limiting_mag=self.adv_limit,
+            theme=theme,
+            half=self.ascii,
+            ascii_symbols=self.ascii,
+            beginner=False,
+            selected=self.selected,
             cursor=self.cursor,
             light_pollution={"město": 0.6, "předměstí": 0.4, "venkov": 0.1}[
                 self.cfg.display.sky_quality
@@ -276,8 +293,11 @@ class AppModel:
             self.layers.grid = order[(order.index(self.layers.grid) + 1) % 3]
             self.cfg.layers.grid = self.layers.grid or "none"  # type: ignore[assignment]
             self.save()
-            return {None: "síť vypnuta", "altaz": "síť: výška/azimut",
-                    "eq": "síť: rektascenze/deklinace"}[self.layers.grid]
+            return {
+                None: "síť vypnuta",
+                "altaz": "síť: výška/azimut",
+                "eq": "síť: rektascenze/deklinace",
+            }[self.layers.grid]
         value = not getattr(self.layers, name)
         setattr(self.layers, name, value)
         setattr(self.cfg.layers, name, value)
@@ -456,20 +476,23 @@ class AppModel:
         elif phase == "den":
             sky = "Je den, hvězdy nejsou vidět."
         else:
-            sky = f"Šero ({phase}), objevují se první hvězdy." if sun < -3 else (
-                f"Šero ({phase})."
-            )
+            sky = f"Šero ({phase}), objevují se první hvězdy." if sun < -3 else (f"Šero ({phase}).")
         moon = scene.bodies["moon"]
         mi = self.moon_now()
         if moon.alt > 0:
-            disturb = "hodně přisvítí" if mi.illumination > 0.7 else (
-                "trochu přisvítí" if mi.illumination > 0.3 else "neruší")
+            disturb = (
+                "hodně přisvítí"
+                if mi.illumination > 0.7
+                else ("trochu přisvítí" if mi.illumination > 0.3 else "neruší")
+            )
             moon_txt = f"Měsíc je nad obzorem a {disturb}."
         else:
             rs = rise_transit_set(BODY_BY_ID["moon"], self.now(), self.location, hours=14)
             if rs.rise:
                 disturb = "a trochu přisvítí" if mi.illumination > 0.3 else ""
-                moon_txt = f"Měsíc vyjde v {hm(rs.rise, self.location.zone)} {disturb}".strip() + "."
+                moon_txt = (
+                    f"Měsíc vyjde v {hm(rs.rise, self.location.zone)} {disturb}".strip() + "."
+                )
             else:
                 moon_txt = "Měsíc dnes v noci nevyjde."
         cond = self.conditions_text(scene)
@@ -578,7 +601,9 @@ class AppModel:
         if self._events is not None and self._events_key == key:
             return self._events
         self._events = compute_events(
-            start, end, self.location,
+            start,
+            end,
+            self.location,
             moon_limit=self.cfg.events.moon_conjunction_deg,
             planet_limit=self.cfg.events.planet_conjunction_deg,
         )
@@ -590,10 +615,17 @@ class AppModel:
         key = (start.replace(minute=0), self.location, len(self.sats))
         if self._passes is not None and self._passes_key == key:
             return self._passes
-        self._passes = passes_for_all(
-            self.sats[:20], start, self.location, days=7,
-            min_alt=self.cfg.satellites.min_altitude,
-        ) if self.sats else []
+        self._passes = (
+            passes_for_all(
+                self.sats[:20],
+                start,
+                self.location,
+                days=7,
+                min_alt=self.cfg.satellites.min_altitude,
+            )
+            if self.sats
+            else []
+        )
         self._passes_key = key
         return self._passes
 
@@ -605,7 +637,9 @@ class AppModel:
 
     def sat_age_warning(self) -> str | None:
         if not self.sats:
-            return "Nejsou stažené dráhy satelitů. Připoj se k internetu (aktualizace proběhne sama)."
+            return (
+                "Nejsou stažené dráhy satelitů. Připoj se k internetu (aktualizace proběhne sama)."
+            )
         if self.sat_store.is_stale(datetime.now(UTC)):
             return "Pozor: dráhy jsou starší než 7 dní, časy přeletů mohou být nepřesné."
         return None

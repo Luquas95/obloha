@@ -162,26 +162,34 @@ class Panorama:
     def degrees_per_dot(self) -> float:
         return self.fov / self.width
 
+    def vertical_degrees_per_dot(self) -> float:
+        """Vertical scale: stretched (up to 2×) so that the top edge ends near the zenith."""
+        d = self.degrees_per_dot()
+        fit = (91.0 - self.bottom_alt) / max(1, self.height)
+        return max(d * 0.5, min(d, fit))
+
     @property
     def top_alt(self) -> float:
-        return self.bottom_alt + self.height * self.degrees_per_dot()
+        return self.bottom_alt + self.height * self.vertical_degrees_per_dot()
 
     def forward(self, alt: FloatArray, az: FloatArray) -> tuple[FloatArray, FloatArray, BoolArray]:
         d = self.degrees_per_dot()
         dx = wrap180(np.asarray(az, dtype=np.float64) - self.center_az)
         x = (self.width - 1) / 2.0 + dx / d
-        y = (self.height - 1) - (np.asarray(alt, dtype=np.float64) - self.bottom_alt) / d
+        v = self.vertical_degrees_per_dot()
+        y = (self.height - 1) - (np.asarray(alt, dtype=np.float64) - self.bottom_alt) / v
         ok = (x >= 0) & (x < self.width) & (y >= 0) & (y < self.height)
         return x, y, ok
 
     def inverse(self, x: FloatArray, y: FloatArray) -> tuple[FloatArray, FloatArray, BoolArray]:
         d = self.degrees_per_dot()
         az = (self.center_az + (np.asarray(x, dtype=np.float64) - (self.width - 1) / 2.0) * d) % 360
-        alt = self.bottom_alt + ((self.height - 1) - np.asarray(y, dtype=np.float64)) * d
+        v = self.vertical_degrees_per_dot()
+        alt = self.bottom_alt + ((self.height - 1) - np.asarray(y, dtype=np.float64)) * v
         return alt, az, alt <= 90.0
 
     def y_of_alt(self, alt: float) -> float:
-        return (self.height - 1) - (alt - self.bottom_alt) / self.degrees_per_dot()
+        return (self.height - 1) - (alt - self.bottom_alt) / self.vertical_degrees_per_dot()
 
     def x_of_az(self, az: float) -> float:
         return (self.width - 1) / 2.0 + float(wrap180(az - self.center_az)) / self.degrees_per_dot()

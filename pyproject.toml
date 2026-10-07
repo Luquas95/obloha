@@ -42,6 +42,7 @@ dev = [
     "mypy>=1.11",
     "timezonefinder>=6.5",
     "textual-serve>=1.1",
+    "cairosvg>=2.9.1",
 ]
 
 [build-system]

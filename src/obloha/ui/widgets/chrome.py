@@ -41,20 +41,26 @@ class HeaderBar(Widget):
         self.time_text = ""
         self.lines: list[str] = []
         self.compact = False
-        self.colors: dict[str, str] = {}
+        self.palette: dict[str, str] = {}
 
     def set_content(self, place: str, time_text: str, lines: list[str], compact: bool) -> None:
         changed = (place, time_text, lines, compact) != (
-            self.place, self.time_text, self.lines, self.compact
+            self.place,
+            self.time_text,
+            self.lines,
+            self.compact,
         )
         self.place, self.time_text, self.lines, self.compact = place, time_text, lines, compact
         self.set_class(compact, "-compact")
+        height = len(lines[:2]) + (1 if compact else 2)
+        if self.styles.height is None or self.styles.height.value != height:
+            self.styles.height = height
         if changed:
             self.refresh()
 
     def render(self) -> Text:
         w = max(10, self.size.width)
-        c = self.colors
+        c = self.palette
         border = Style(color=c.get("border", "#2a3452"))
         accent = Style(color=c.get("accent", "#8fb8ff"), bold=True)
         text_st = Style(color=c.get("text", "#d6dcea"))

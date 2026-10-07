@@ -94,8 +94,9 @@ class SkyMap(Widget):
         frame = self.result.frame
         rows = frame.chars.shape[0]
         new_keys = [frame.row_key(r) for r in range(rows)]
-        changed = [r for r in range(rows) if full or r >= len(self._keys)
-                   or self._keys[r] != new_keys[r]]
+        changed = [
+            r for r in range(rows) if full or r >= len(self._keys) or self._keys[r] != new_keys[r]
+        ]
         strips = self._strips if len(self._strips) == rows else [Strip.blank(w)] * rows
         strips = list(strips)
         for r in changed:

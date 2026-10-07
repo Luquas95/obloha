@@ -47,7 +47,10 @@ def test_stereographic_zenith_view():
 def test_panorama_horizon_bottom():
     p = Panorama(200, 100, center_az=180, fov=200, bottom_alt=-5)
     assert p.y_of_alt(-5) == pytest.approx(99)
-    assert p.top_alt == pytest.approx(95)
+    assert p.top_alt == pytest.approx(91)  # vertically stretched to end at the zenith
+    tall = Panorama(100, 150, center_az=180, fov=100, bottom_alt=-6)
+    assert tall.top_alt == pytest.approx(91.0)
+    assert tall.y_of_alt(91.0) == pytest.approx(-1.0)
     assert p.x_of_az(180) == pytest.approx(99.5)
     _, _, ok = p.forward(np.array([10.0]), np.array([0.0]))
     assert not ok[0]

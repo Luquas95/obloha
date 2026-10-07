@@ -30,22 +30,67 @@ CONTEXT_NAMES = {
 
 #: human readable / config spelling -> Textual key name
 _CHAR_KEYS = {
-    "?": "question_mark", "/": "slash", " ": "space", "space": "space", ".": "full_stop",
-    ",": "comma", ">": "greater_than_sign", "<": "less_than_sign", "+": "plus",
-    "-": "minus", "[": "left_square_bracket", "]": "right_square_bracket", "=": "equals_sign",
-    "enter": "enter", "tab": "tab", "escape": "escape", "esc": "escape", "up": "up",
-    "down": "down", "left": "left", "right": "right", "backspace": "backspace",
-    "home": "home", "end": "end", "pageup": "pageup", "pagedown": "pagedown",
-    "*": "asterisk", "#": "number_sign", "!": "exclamation_mark", ":": "colon",
-    ";": "semicolon", "'": "apostrophe", "\"": "quotation_mark", "_": "underscore",
-    "~": "tilde", "`": "grave_accent", "|": "vertical_line", "\\": "backslash",
-    "(": "left_parenthesis", ")": "right_parenthesis", "{": "left_curly_bracket",
-    "}": "right_curly_bracket", "@": "at", "^": "circumflex_accent", "&": "ampersand",
-    "%": "percent_sign", "$": "dollar_sign",
+    "?": "question_mark",
+    "/": "slash",
+    " ": "space",
+    "space": "space",
+    ".": "full_stop",
+    ",": "comma",
+    ">": "greater_than_sign",
+    "<": "less_than_sign",
+    "+": "plus",
+    "-": "minus",
+    "[": "left_square_bracket",
+    "]": "right_square_bracket",
+    "=": "equals_sign",
+    "enter": "enter",
+    "tab": "tab",
+    "escape": "escape",
+    "esc": "escape",
+    "up": "up",
+    "down": "down",
+    "left": "left",
+    "right": "right",
+    "backspace": "backspace",
+    "home": "home",
+    "end": "end",
+    "pageup": "pageup",
+    "pagedown": "pagedown",
+    "*": "asterisk",
+    "#": "number_sign",
+    "!": "exclamation_mark",
+    ":": "colon",
+    ";": "semicolon",
+    "'": "apostrophe",
+    '"': "quotation_mark",
+    "_": "underscore",
+    "~": "tilde",
+    "`": "grave_accent",
+    "|": "vertical_line",
+    "\\": "backslash",
+    "(": "left_parenthesis",
+    ")": "right_parenthesis",
+    "{": "left_curly_bracket",
+    "}": "right_curly_bracket",
+    "@": "at",
+    "^": "circumflex_accent",
+    "&": "ampersand",
+    "%": "percent_sign",
+    "$": "dollar_sign",
 }
 _DISPLAY = {v: k for k, v in _CHAR_KEYS.items() if len(k) == 1 and k != " "}
-_DISPLAY.update({"space": "Space", "enter": "Enter", "tab": "Tab", "escape": "Esc",
-                 "up": "↑", "down": "↓", "left": "←", "right": "→"})
+_DISPLAY.update(
+    {
+        "space": "Space",
+        "enter": "Enter",
+        "tab": "Tab",
+        "escape": "Esc",
+        "up": "↑",
+        "down": "↓",
+        "left": "←",
+        "right": "→",
+    }
+)
 
 
 class KeymapError(ValueError):
@@ -139,8 +184,14 @@ DEFAULT_ACTIONS: tuple[Action, ...] = (
     Action("turn_right", "sky-beginner", ("right", "l"), "Otočit doprava"),
     Action("look_up", "sky-beginner", ("up", "k"), "Podívat se výš", "výš/níž"),
     Action("look_down", "sky-beginner", ("down", "j"), "Podívat se níž"),
-    Action("identify", "sky-beginner", ("?",), "Co je to za světlo?", "co je to",
-           shadows=frozenset({"help"})),
+    Action(
+        "identify",
+        "sky-beginner",
+        ("?",),
+        "Co je to za světlo?",
+        "co je to",
+        shadows=frozenset({"help"}),
+    ),
     Action("compass", "sky-beginner", ("c",), "Kompas telefonu (Termux)", "kompas"),
     Action("found", "sky-beginner", ("f",), "Úkol: našel jsem"),
     Action("hint", "sky-beginner", ("x",), "Úkol: další nápověda"),
@@ -150,8 +201,7 @@ DEFAULT_ACTIONS: tuple[Action, ...] = (
     Action("cursor_up", "sky-advanced", ("up", "k"), "Kurzor nahoru"),
     Action("cursor_down", "sky-advanced", ("down", "j"), "Kurzor dolů"),
     Action("toggle_view", "sky-advanced", ("v",), "Celá obloha / pohled jedním směrem", "pohled"),
-    Action("layer_constellations", "sky-advanced", ("c",), "Vrstva: čáry souhvězdí",
-           "souhvězdí"),
+    Action("layer_constellations", "sky-advanced", ("c",), "Vrstva: čáry souhvězdí", "souhvězdí"),
     Action("layer_borders", "sky-advanced", ("b",), "Vrstva: hranice souhvězdí"),
     Action("layer_milky_way", "sky-advanced", ("M",), "Vrstva: Mléčná dráha"),
     Action("layer_grid", "sky-advanced", ("g",), "Vrstva: souřadnicová síť (alt-az / RA-Dec)"),
@@ -170,18 +220,26 @@ DEFAULT_ACTIONS: tuple[Action, ...] = (
 class Keymap:
     """Resolved key bindings."""
 
-    def __init__(self, actions: Iterable[Action] = DEFAULT_ACTIONS,
-                 overrides: Mapping[str, str | list[str]] | None = None) -> None:
+    def __init__(
+        self,
+        actions: Iterable[Action] = DEFAULT_ACTIONS,
+        overrides: Mapping[str, str | list[str]] | None = None,
+    ) -> None:
         by_id = {a.id: a for a in actions}
         resolved: dict[str, Action] = {}
         for a in by_id.values():
-            resolved[a.id] = Action(a.id, a.context, tuple(normalize_key(k) for k in a.keys),
-                                    a.description, a.footer, a.shadows)
+            resolved[a.id] = Action(
+                a.id,
+                a.context,
+                tuple(normalize_key(k) for k in a.keys),
+                a.description,
+                a.footer,
+                a.shadows,
+            )
         for action_id, value in (overrides or {}).items():
             if action_id not in by_id:
                 raise KeymapError(
-                    f"[keys] neznámá akce {action_id!r}. Platné akce: "
-                    + ", ".join(sorted(by_id))
+                    f"[keys] neznámá akce {action_id!r}. Platné akce: " + ", ".join(sorted(by_id))
                 )
             raw = [value] if isinstance(value, str) else list(value)
             keys = []
@@ -189,8 +247,9 @@ class Keymap:
                 for k in item.split(",") if item.strip() != "," else [item]:
                     keys.append(normalize_key(k))
             a = resolved[action_id]
-            resolved[action_id] = Action(a.id, a.context, tuple(keys), a.description, a.footer,
-                                         a.shadows)
+            resolved[action_id] = Action(
+                a.id, a.context, tuple(keys), a.description, a.footer, a.shadows
+            )
         self.actions = resolved
         self._check()
 
@@ -259,6 +318,11 @@ class Keymap:
         for ctx in CONTEXT_PARENTS:
             for a in self.actions.values():
                 if a.context == ctx:
-                    rows.append((CONTEXT_NAMES[ctx], " ".join(display_key(k) for k in a.keys),
-                                 a.description))
+                    rows.append(
+                        (
+                            CONTEXT_NAMES[ctx],
+                            " ".join(display_key(k) for k in a.keys),
+                            a.description,
+                        )
+                    )
         return rows

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from rich.markup import escape
 from textual import events, on
@@ -46,7 +46,7 @@ ModalScreen .buttons { height: auto; margin-top: 1; }
 
 class BaseModal(ModalScreen[Any]):
     DEFAULT_CSS = MODAL_CSS
-    BINDINGS = [("escape", "dismiss_none", "Zavřít")]
+    BINDINGS: ClassVar = [("escape", "dismiss_none", "Zavřít")]
 
     @property
     def oapp(self) -> ObloApp:
@@ -99,9 +99,17 @@ def search_objects(app: ObloApp, query: str, limit: int = 12) -> list[SearchHit]
     model = app.model
     cat = model.scene().cat
     hits: list[tuple[int, SearchHit]] = []
-    en_names = {"sun": "sun", "moon": "moon", "mercury": "mercury", "venus": "venus",
-                "mars": "mars", "jupiter": "jupiter", "saturn": "saturn", "uranus": "uranus",
-                "neptune": "neptune"}
+    en_names = {
+        "sun": "sun",
+        "moon": "moon",
+        "mercury": "mercury",
+        "venus": "venus",
+        "mars": "mars",
+        "jupiter": "jupiter",
+        "saturn": "saturn",
+        "uranus": "uranus",
+        "neptune": "neptune",
+    }
     for b in BODIES:
         names = {fold(b.name), en_names[b.id]}
         for n in names:
@@ -185,7 +193,9 @@ class SearchScreen(BaseModal):
         if event.key in ("down", "up") and self.hits:
             event.stop()
             cur = ol.highlighted or 0
-            ol.highlighted = max(0, min(len(self.hits) - 1, cur + (1 if event.key == "down" else -1)))
+            ol.highlighted = max(
+                0, min(len(self.hits) - 1, cur + (1 if event.key == "down" else -1))
+            )
 
 
 # ---------------------------------------------------------------------- places
@@ -195,8 +205,10 @@ class PlaceScreen(BaseModal):
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog") as v:
             v.border_title = "VÝBĚR MÍSTA"
-            yield Input(placeholder="město nebo souřadnice (50.08, 14.44 / 50°4'N 14°26'E)",
-                        id="place-input")
+            yield Input(
+                placeholder="město nebo souřadnice (50.08, 14.44 / 50°4'N 14°26'E)",
+                id="place-input",
+            )
             yield Static("", id="place-mode", classes="hint")
             yield OptionList(id="place-results")
             with Horizontal(classes="buttons"):
@@ -204,8 +216,10 @@ class PlaceScreen(BaseModal):
                 yield Button("★ oblíbené", id="place-fav")
                 yield Button("+ porovnat", id="place-compare")
                 yield Button("porovnání měst", id="place-show-compare")
-            yield Static("Tab oblíbená ↔ poslední · Enter vybrat · Ctrl+O přidat do porovnání",
-                         classes="hint")
+            yield Static(
+                "Tab oblíbená ↔ poslední · Enter vybrat · Ctrl+O přidat do porovnání",
+                classes="hint",
+            )
 
     def on_mount(self) -> None:
         self.mode = "search"
@@ -250,11 +264,13 @@ class PlaceScreen(BaseModal):
             else:
                 tz = timezone_at(lat, lon)
                 near = city_db().nearest(lat, lon)
-                loc = Location(f"{num(lat, 3)}, {num(lon, 3)}", lat, lon, 0.0, tz,
-                               f"u obce {near.name}")
+                loc = Location(
+                    f"{num(lat, 3)}, {num(lon, 3)}", lat, lon, 0.0, tz, f"u obce {near.name}"
+                )
                 self.results.append(loc)
-                self.labels.append(f"souřadnice {num(lat, 4)}° {num(lon, 4)}° · {tz} "
-                                   f"(blízko {near.label})")
+                self.labels.append(
+                    f"souřadnice {num(lat, 4)}° {num(lon, 4)}° · {tz} (blízko {near.label})"
+                )
                 self.query_one("#place-mode", Static).update("ruční souřadnice")
         else:
             cities: list[City] = city_db().search(text, 10)
@@ -309,17 +325,21 @@ class PlaceScreen(BaseModal):
         elif event.key in ("down", "up") and self.results:
             event.stop()
             cur = ol.highlighted or 0
-            ol.highlighted = max(0, min(len(self.results) - 1,
-                                        cur + (1 if event.key == "down" else -1)))
+            ol.highlighted = max(
+                0, min(len(self.results) - 1, cur + (1 if event.key == "down" else -1))
+            )
 
 
 class CompareScreen(BaseModal):
     """Table comparing 2–5 places for tonight (and the next eclipse)."""
 
-    DEFAULT_CSS = MODAL_CSS + """
+    DEFAULT_CSS = (
+        MODAL_CSS
+        + """
     CompareScreen > .dialog { width: 110; }
     CompareScreen DataTable { height: auto; max-height: 20; }
     """
+    )
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog") as v:
@@ -341,8 +361,10 @@ class CompareScreen(BaseModal):
         places = self.oapp.compare_places()
         note = self.query_one("#compare-note", Static)
         if len(places) < 2:
-            note.update("Přidej aspoň dvě místa: v dialogu místa (L) tlačítkem „+ porovnat“. "
-                        "Aktuální místo je zahrnuté automaticky.")
+            note.update(
+                "Přidej aspoň dvě místa: v dialogu místa (L) tlačítkem „+ porovnat“. "
+                "Aktuální místo je zahrnuté automaticky."
+            )
         else:
             note.update("Časy v pásmu každého místa. Měsíc a ISS pro dnešní noc.")
         table.add_column("")
@@ -372,8 +394,11 @@ def parse_time_input(text: str, now: datetime, zone: Any) -> datetime:
     if m:
         value = float(m[2].replace(",", ".")) * (1 if m[1] == "+" else -1)
         unit = m[3]
-        delta = timedelta(minutes=value) if unit in ("min", "m") else (
-            timedelta(hours=value) if unit == "h" else timedelta(days=value))
+        delta = (
+            timedelta(minutes=value)
+            if unit in ("min", "m")
+            else (timedelta(hours=value) if unit == "h" else timedelta(days=value))
+        )
         return now + delta
     local_now = now.astimezone(zone)
     base = local_now.date()
@@ -403,18 +428,25 @@ def parse_time_input(text: str, now: datetime, zone: Any) -> datetime:
             y, mo, d = base.year, base.month, base.day
             h, mi = int(m[1]), int(m[2])
         return datetime(y, mo, d, h, mi, tzinfo=zone).astimezone(UTC)
-    raise ValueError("Nerozumím času. Zkus „2026-10-01 21:00“, „1. 10. 2026 21:00“, "
-                     "„21:00“, „zítra 5:30“ nebo „+2h“.")
+    raise ValueError(
+        "Nerozumím času. Zkus „2026-10-01 21:00“, „1. 10. 2026 21:00“, "
+        "„21:00“, „zítra 5:30“ nebo „+2h“."
+    )
 
 
 class TimeScreen(BaseModal):
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog") as v:
             v.border_title = "ZADAT DATUM A ČAS"
-            yield Input(placeholder="2026-10-01 21:00 · 1. 10. 2026 21:00 · 21:00 · +2h · zítra 5:30",
-                        id="time-input")
-            yield Static("Čas v pásmu zvoleného místa. Rozsah 1900–2049 (efemerida DE421). "
-                         "Prázdné = teď.", classes="hint", id="time-hint")
+            yield Input(
+                placeholder="2026-10-01 21:00 · 1. 10. 2026 21:00 · 21:00 · +2h · zítra 5:30",
+                id="time-input",
+            )
+            yield Static(
+                "Čas v pásmu zvoleného místa. Rozsah 1900–2049 (efemerida DE421). Prázdné = teď.",
+                classes="hint",
+                id="time-hint",
+            )
 
     def on_mount(self) -> None:
         self.query_one(Input).focus()
@@ -432,7 +464,7 @@ class TimeScreen(BaseModal):
 
 # ---------------------------------------------------------------------- identify
 class IdentifyScreen(BaseModal):
-    """"Co je to za světlo?" for a pointed direction or a typed one."""
+    """ "Co je to za světlo?" for a pointed direction or a typed one."""
 
     def __init__(self, alt: float, az: float, moving: bool = False) -> None:
         super().__init__()
@@ -444,8 +476,9 @@ class IdentifyScreen(BaseModal):
         with VerticalScroll(classes="dialog") as v:
             v.border_title = "? CO JE TO ZA SVĚTLO"
             yield Static(id="identify-text")
-            yield Input(placeholder="nebo napiš směr a výšku: „jihovýchod, 2 pěsti“",
-                        id="identify-input")
+            yield Input(
+                placeholder="nebo napiš směr a výšku: „jihovýchod, 2 pěsti“", id="identify-input"
+            )
             with Horizontal(classes="buttons"):
                 yield Button("pohybuje se", id="identify-moving")
                 yield Button("vybrat a ukázat", id="identify-select", variant="primary")
@@ -458,19 +491,23 @@ class IdentifyScreen(BaseModal):
     def _update(self) -> None:
         model = self.oapp.model
         scene = model.scene()
-        self.result = identify(scene, self.alt, self.az, moving=self.moving,
-                               user_limit=model.beg_limit + 0.5)
+        self.result = identify(
+            scene, self.alt, self.az, moving=self.moving, user_limit=model.beg_limit + 0.5
+        )
         t = model.theme
-        lines = [f"[#{t.muted:06x}]Ukazuješ {compass_name(self.az)}, {self.alt:.0f}° nad "
-                 "obzorem.[/]", ""]
+        lines = [
+            f"[#{t.muted:06x}]Ukazuješ {compass_name(self.az)}, {self.alt:.0f}° nad obzorem.[/]",
+            "",
+        ]
         if not self.result.candidates:
             lines.append("Tam teď nic jasného není. Zkus ukázat přesněji nebo napiš směr.")
         for k, c in enumerate(self.result.candidates):
             pct = f"{c.probability * 100:.0f} %"
             if k == 0:
                 sym = "●" if c.kind == "planeta" else "✦" if c.kind == "hvězda" else "▲"
-                lines.append(f"[b]{sym}  {escape(c.name)}[/b]  {escape(c.kind)}  "
-                             f"[#{t.muted:06x}]{pct}[/]")
+                lines.append(
+                    f"[b]{sym}  {escape(c.name)}[/b]  {escape(c.kind)}  [#{t.muted:06x}]{pct}[/]"
+                )
                 lines.append(escape(c.explanation))
                 lines.append("")
             else:
@@ -550,9 +587,13 @@ class DetailScreen(BaseModal):
         rs = self.oapp.rise_set_cached(self.ref)
         zone = model.display_zone
         if rs is not None and not (rs.always_up or rs.never_up):
-            lines.append(glossary_markup(
-                f"východ {hm(rs.rise, zone)} · kulminace {hm(rs.transit, zone)} · "
-                f"západ {hm(rs.set, zone)}", col))
+            lines.append(
+                glossary_markup(
+                    f"východ {hm(rs.rise, zone)} · kulminace {hm(rs.transit, zone)} · "
+                    f"západ {hm(rs.set, zone)}",
+                    col,
+                )
+            )
         elif rs is not None and rs.always_up:
             lines.append("Nikdy nezapadá (cirkumpolární).")
         if info.text:

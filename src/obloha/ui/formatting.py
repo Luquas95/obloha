@@ -24,7 +24,7 @@ def tz_abbr(when: datetime, zone: ZoneInfo) -> str:
     name = loc.tzname() or ""
     if name in TZ_CS:
         return TZ_CS[name]
-    if name and not name[0] in "+-":
+    if name and name[0] not in "+-":
         return name
     off = loc.utcoffset() or timedelta()
     total = int(off.total_seconds() // 60)
@@ -57,7 +57,7 @@ def date_long(when: datetime, zone: ZoneInfo) -> str:
 
 def duration(td: timedelta) -> str:
     """``10 h 05 m``"""
-    minutes = int(round(td.total_seconds() / 60))
+    minutes = round(td.total_seconds() / 60)
     h, m = divmod(max(0, minutes), 60)
     return f"{h} h {m:02d} m"
 
