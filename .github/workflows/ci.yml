@@ -20,6 +20,9 @@ jobs:
       - name: Mypy
         run: uv run mypy
       - name: Pytest
+        env:
+          # shared CI runners are ~2× slower than a typical laptop
+          OBLOHA_BENCH_FACTOR: "2"
         run: uv run pytest --cov --cov-report=term --cov-fail-under=85
       - name: Core coverage (bez UI)
         run: uv run coverage report --omit='src/obloha/ui/*,src/obloha/cli.py,src/obloha/web.py' --fail-under=90
