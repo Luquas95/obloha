@@ -11,7 +11,7 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any
 
-from skyfield.api import Loader, Timescale, load_constellation_map, load_file
+from skyfield.api import Timescale, load, load_constellation_map, load_file
 
 #: Supported time range (DE421 covers 1899-07-29 .. 2053-10-08).
 MIN_DATE = datetime(1900, 1, 1, tzinfo=UTC)
@@ -36,7 +36,9 @@ def ephemeris() -> Any:
 @lru_cache(maxsize=1)
 def timescale() -> Timescale:
     """Return a timescale built from Skyfield's bundled tables."""
-    return Loader("/nonexistent-obloha-loader", verbose=False).timescale(builtin=True)
+    # builtin=True reads only tables shipped inside the skyfield package; the
+    # module-level ``load`` (directory ".") never creates or writes files here
+    return load.timescale(builtin=True)
 
 
 @lru_cache(maxsize=1)
