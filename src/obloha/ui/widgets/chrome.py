@@ -139,7 +139,7 @@ class TouchBar(Horizontal):
 
     DEFAULT_CSS = """
     TouchBar { height: 3; width: 1fr; align: center middle; }
-    TouchBar Button { min-width: 4; width: 1fr; height: 3; margin: 0 0 0 1; }
+    TouchBar Button { min-width: 4; width: 1fr; height: 3; margin: 0 0 0 1; padding: 0; }
     """
 
     class Pressed(Message):
