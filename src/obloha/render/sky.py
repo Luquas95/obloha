@@ -227,7 +227,7 @@ class SkyRenderer:
     def draw_grid(self) -> None:
         t = self.theme
         layer = self.opts.layers.grid
-        if self.opts.kind == "full" and self.opts.layers.horizon:
+        if self.opts.kind == "full" and self.opts.layers.horizon and not self.opts.half:
             for a in (30.0, 60.0):
                 az = np.linspace(0.0, 360.0, 721)
                 x, y, ok = self.project(np.full_like(az, a), az)
@@ -268,6 +268,8 @@ class SkyRenderer:
             color = (
                 t.const_lines if self.scene.sun_alt < -6 else blend(t.const_lines, self.sky_bg, 0.5)
             )
+            if self.opts.half:  # half blocks are coarse: keep lines in the background
+                color = blend(color, self.sky_bg, 0.6)
             self.canvas.segments(x[a][m], y[a][m], x[b][m], y[b][m], color, -40)
         if self.opts.layers.labels and not self.opts.beginner:
             for con in cat.constellations:
@@ -384,7 +386,8 @@ class SkyRenderer:
     def star_visibility(self) -> NDArray[np.bool_]:
         sc = self.scene
         mag = sc.cat.mag
-        return (mag <= self.lim) & (sc.star_alt > self.min_alt)
+        lim = min(self.lim, 4.5) if self.opts.half else self.lim
+        return (mag <= lim) & (sc.star_alt > self.min_alt)
 
     def draw_stars(self) -> None:
         sc, c = self.scene, self.canvas

@@ -65,6 +65,7 @@ ADVANCED_TOUCH = [
 
 
 class MenuScreen(BaseModal):
+    SCOPED_CSS = False
     """Touch friendly menu (≡) with all important actions."""
 
     ITEMS: ClassVar[list[tuple[str, str]]] = [
@@ -838,7 +839,11 @@ class ObloApp(App[None]):
         elif model.selected is not None and model.scene().altaz_of(model.selected):
             alt, az = model.scene().altaz_of(model.selected)  # type: ignore[misc]
         else:
-            alt, az = max(15.0, model.win_bottom + 30.0), model.win_az
+            items = suggestions(model.scene(), user_limit=model.beg_limit)
+            if items:
+                alt, az = items[0].alt, items[0].az
+            else:
+                alt, az = max(15.0, model.win_bottom + 30.0), model.win_az
 
         def chosen(ref: ObjectRef | None) -> None:
             if ref is not None:

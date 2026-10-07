@@ -45,6 +45,7 @@ ModalScreen .buttons { height: auto; margin-top: 1; }
 
 
 class BaseModal(ModalScreen[Any]):
+    SCOPED_CSS = False
     DEFAULT_CSS = MODAL_CSS
     BINDINGS: ClassVar = [("escape", "dismiss_none", "Zavřít")]
 
@@ -331,6 +332,7 @@ class PlaceScreen(BaseModal):
 
 
 class CompareScreen(BaseModal):
+    SCOPED_CSS = False
     """Table comparing 2–5 places for tonight (and the next eclipse)."""
 
     DEFAULT_CSS = (
