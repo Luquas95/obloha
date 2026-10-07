@@ -266,7 +266,7 @@ def find_solar_eclipses(start: datetime, end: datetime, location: Location) -> l
             .altaz("standard")[0]
             .degrees
         )
-        visible = (overlap > 0) & (sun_alt > -0.833)
+        visible = (overlap > 0) & (sun_alt > -0.27)
         if not np.any(visible):
             out.append(SolarEclipse(_dt(tg), gtype, None, None, None, None, 0.0, 0.0, 0.0))
             continue

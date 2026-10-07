@@ -84,12 +84,16 @@ def load_cached(cache: Path, location: Location, now: datetime) -> Forecast | No
     path = _cache_file(cache, location)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        fetched = _aware(datetime.fromisoformat(payload["fetched_at"]))
+        if now - fetched > CACHE_MAX_AGE:
+            return None
+        return parse_open_meteo(payload["data"], fetched, stale=now - fetched > CACHE_TTL)
+    except Exception:  # corrupt or foreign cache file: ignore it
         return None
-    fetched = datetime.fromisoformat(payload["fetched_at"])
-    if now - fetched > CACHE_MAX_AGE:
-        return None
-    return parse_open_meteo(payload["data"], fetched, stale=now - fetched > CACHE_TTL)
+
+
+def _aware(when: datetime) -> datetime:
+    return when if when.tzinfo is not None else when.replace(tzinfo=UTC)
 
 
 async def fetch_forecast(
@@ -125,7 +129,7 @@ async def fetch_forecast(
         forecast = parse_open_meteo(data, now)
     except httpx.TimeoutException:
         return _fallback(cached, "Open-Meteo neodpovídá (timeout)")
-    except (httpx.HTTPError, ValueError, KeyError) as exc:
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
         return _fallback(cached, f"předpověď se nepodařilo stáhnout ({type(exc).__name__})")
     finally:
         if own:
@@ -152,6 +156,7 @@ class HourScore:
     darkness: float
     moon: float
     clouds: float | None
+    unknown: bool = False  # forecast exists but does not cover this hour
 
 
 def darkness_factor(sun_alt: float) -> float:
@@ -203,7 +208,8 @@ def night_scores(
         hw = forecast.at(h) if forecast else None
         cf = cloud_factor(hw) if hw else None
         value = d * mf * (cf if cf is not None else 1.0)
-        out.append(HourScore(h, round(100 * value), d, mf, hw.cloud if hw else None))
+        unknown = forecast is not None and hw is None
+        out.append(HourScore(h, round(100 * value), d, mf, hw.cloud if hw else None, unknown))
     return out
 
 
@@ -211,7 +217,8 @@ def best_window(scores: list[HourScore], threshold: int = 50) -> tuple[datetime,
     """Longest run of hours with score >= threshold (ties: higher total)."""
     best: tuple[int, int, int, int] | None = None  # length, total, start, end
     i = 0
-    vals = np.array([s.score for s in scores])
+    # hours outside the forecast must not win over hours forecast as good
+    vals = np.array([-1 if s.unknown else s.score for s in scores])
     while i < len(scores):
         if vals[i] < threshold:
             i += 1

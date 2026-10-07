@@ -94,7 +94,9 @@ def test_passes_for_all_and_positions(iss, prague):
     p = vis[0]
     pos = current_positions([iss], p.peak.when, prague)
     assert pos and pos[0].name == "ISS" and pos[0].alt > 10
-    assert current_positions([iss], p.peak.when + timedelta(hours=3), prague) == [] or True
+    # far from the TLE epoch the elements are meaningless: nothing is shown
+    assert current_positions([iss], p.peak.when + timedelta(days=60), prague) == []
+    assert find_passes(iss, START + timedelta(days=60), START + timedelta(days=61), prague) == []
 
 
 def test_satellite_magnitude():
@@ -162,3 +164,19 @@ async def test_refresh_invalid_payload(tmp_path):
 async def test_refresh_offline(tmp_path):
     res = await refresh_tle(SatelliteStore(tmp_path), ["stations"], [], offline=True)
     assert not res.ok and "offline" in res.status
+
+
+def test_parse_tle_rejects_bad_checksum_and_garbage():
+    assert parse_tle("X\n1 25544U\n2 25544") == []
+    bad = TLE.replace("0  5082", "0  5083")
+    assert parse_tle(bad) == []
+
+
+def test_store_tolerates_malformed_meta(tmp_path):
+    store = SatelliteStore(tmp_path)
+    store.dir.mkdir(parents=True)
+    store.meta_path.write_text("[1, 2]")
+    assert store.fetched_at() is None and store.is_stale()
+    store.meta_path.write_text('{"fetched_at": "2026-01-01T00:00:00"}')
+    assert store.fetched_at().tzinfo is not None
+    assert store.needs_refresh(24, datetime(2026, 1, 3, tzinfo=UTC))

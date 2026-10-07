@@ -42,7 +42,7 @@ def test_normalize(raw, norm):
 
 
 def test_normalize_errors():
-    for bad in ("", "Hyper+x", "ctrl+shift+p", "nonsense"):
+    for bad in ("", "Hyper+x", "ctrl+shift+p", "nonsense", "ctrl+", "ctrl+ctrl+a"):
         with pytest.raises(KeymapError):
             normalize_key(bad)
 
@@ -70,3 +70,15 @@ def test_footer_and_help():
     assert any(r[2] == "Noční vidění (červený režim)" for r in rows)
     assert display_key("ctrl+p") == "Ctrl+P"
     assert display_key("left") == "←"
+
+
+def test_shift_letter_is_uppercase():
+    assert normalize_key("shift+a") == "A"
+
+
+def test_footer_respects_shadowing():
+    km = Keymap()
+    labels = {d: k for k, d in km.footer("sky-beginner", ["identify", "help"])}
+    assert labels == {"co je to": "?", "nápověda": "H"}
+    assert km.label_in("help", "sky-beginner") == "H"
+    assert km.label_in("help", "global") == "?"

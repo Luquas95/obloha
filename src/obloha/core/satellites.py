@@ -19,6 +19,14 @@ from obloha.core.sky import SatPosition
 
 CELESTRAK = "https://celestrak.org/NORAD/elements/gp.php"
 STALE_DAYS = 7
+#: SGP4 predictions are meaningless far from the TLE epoch
+TLE_VALID_DAYS = 30.0
+
+
+def tle_valid_at(sat: EarthSatellite, t: Any) -> bool:
+    """True when ``t`` is within :data:`TLE_VALID_DAYS` of the element set epoch."""
+    return bool(abs(t.tt - sat.epoch.tt) <= TLE_VALID_DAYS)
+
 
 #: Standard magnitudes (1000 km range, 50 % illuminated), McCants/heavens-above style.
 STD_MAG = {25544: -1.8, 48274: -0.8, 20580: 2.2}
@@ -41,11 +49,15 @@ def parse_tle(text: str) -> list[tuple[str, str, str]]:
     i = 0
     while i < len(lines):
         if lines[i].startswith("1 ") and i + 1 < len(lines) and lines[i + 1].startswith("2 "):
+            if not (tle_checksum_ok(lines[i]) and tle_checksum_ok(lines[i + 1])):
+                i += 2
+                continue
             name = lines[i][2:7].strip()
             out.append((name, lines[i], lines[i + 1]))
             i += 2
         elif i + 2 < len(lines) and lines[i + 1].startswith("1 ") and lines[i + 2].startswith("2 "):
-            out.append((lines[i].strip(), lines[i + 1], lines[i + 2]))
+            if tle_checksum_ok(lines[i + 1]) and tle_checksum_ok(lines[i + 2]):
+                out.append((lines[i].strip(), lines[i + 1], lines[i + 2]))
             i += 3
         else:
             i += 1
@@ -66,14 +78,20 @@ class SatelliteStore:
 
     def _meta(self) -> dict[str, Any]:
         try:
-            data: dict[str, Any] = json.loads(self.meta_path.read_text(encoding="utf-8"))
-            return data
+            data = json.loads(self.meta_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return {}
+        return data if isinstance(data, dict) else {}
 
     def fetched_at(self) -> datetime | None:
         value = self._meta().get("fetched_at")
-        return datetime.fromisoformat(value) if value else None
+        if not isinstance(value, str):
+            return None
+        try:
+            when = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        return when if when.tzinfo is not None else when.replace(tzinfo=UTC)
 
     def age(self, now: datetime | None = None) -> timedelta | None:
         fetched = self.fetched_at()
@@ -131,7 +149,10 @@ def satellites_from_tle(text: str) -> list[EarthSatellite]:
     ts = timescale()
     out = []
     for name, l1, l2 in parse_tle(text):
-        sat = EarthSatellite(l1, l2, name, ts)
+        try:
+            sat = EarthSatellite(l1, l2, name, ts)
+        except (ValueError, IndexError):
+            continue
         num = int(sat.model.satnum)
         if num in NAMES_CS:
             sat.name = NAMES_CS[num]
@@ -247,6 +268,8 @@ def find_passes(
     ts = timescale()
     eph = ephemeris()
     t0, t1 = ts_from_datetime(start), ts_from_datetime(end)
+    if not (tle_valid_at(sat, t0) and tle_valid_at(sat, t1)):
+        return []
     times, events = sat.find_events(location.topos, t0, t1, altitude_degrees=min_alt)
     out: list[SatPass] = []
     diff = sat - location.topos
@@ -331,6 +354,8 @@ def current_positions(
     eph = ephemeris()
     out = []
     for sat in sats[:limit]:
+        if not tle_valid_at(sat, t):
+            continue
         alt, az, dist = (sat - location.topos).at(t).altaz()
         if alt.degrees <= 0:
             continue

@@ -264,3 +264,47 @@ async def test_partial_repaint_only_changed_rows():
         app.model.cursor = (app.model.cursor[0] + 5, app.model.cursor[1])
         sky.map.redraw()  # only the rows around the old and new cursor change
         assert 0 < sky.map.rows_repainted - n <= 4 < rows
+
+
+async def test_background_workers_compute_and_do_not_loop_on_errors():
+    app = make_app(sync=False)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("4")
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        events = app.main.query_one(EventsPane)
+        assert events.table.row_count > 20
+        calls = []
+
+        def broken():
+            calls.append(1)
+            raise RuntimeError("boom")
+
+        app.model._events = None
+        app.model.events = broken  # type: ignore[method-assign]
+        for _ in range(5):
+            app.refresh_all(full=True)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+        assert len(calls) == 1
+
+
+async def test_night_vision_has_only_red_hues():
+    import re
+
+    app = make_app()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("n")
+        for keys in ([], ["question_mark"], ["escape", "L"], ["escape", "5"]):
+            await pilot.press(*keys)
+            await pilot.pause()
+            svg = app.export_screenshot()
+            colors = set(re.findall(r"#([0-9a-fA-F]{6})\b", svg))
+            bad = []
+            for c in colors:
+                r, g, b = (int(c[i : i + 2], 16) for i in (0, 2, 4))
+                if c.lower() in ("c5c8c6", "292929", "ff5f57", "febc2e", "28c840"):
+                    continue  # SVG window chrome drawn by the exporter, not the app
+                if b > r or g > r or min(r, g, b) > 180:
+                    bad.append(c)
+            assert not bad, (keys, sorted(bad)[:10])

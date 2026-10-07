@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 WEEKDAYS = ("po", "út", "st", "čt", "pá", "so", "ne")
@@ -73,3 +74,24 @@ def plural(n: int, one: str, few: str, many: str) -> str:
     if 2 <= n <= 4:
         return few
     return many
+
+
+def local_zone() -> Any:
+    """The user's own IANA time zone (``TZ`` or ``/etc/localtime``), DST aware."""
+    import os
+    from pathlib import Path
+
+    name = os.environ.get("TZ", "").lstrip(":")
+    candidates = [name] if name else []
+    try:
+        target = str(Path("/etc/localtime").resolve())
+        if "zoneinfo/" in target:
+            candidates.append(target.split("zoneinfo/", 1)[1])
+    except OSError:  # pragma: no cover
+        pass
+    for cand in candidates:
+        try:
+            return ZoneInfo(cand)
+        except (ValueError, KeyError, OSError):
+            continue
+    return datetime.now().astimezone().tzinfo

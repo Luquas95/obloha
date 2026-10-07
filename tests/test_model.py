@@ -124,4 +124,17 @@ def test_formatting():
     assert plural(3, "pěst", "pěsti", "pěstí") == "pěsti"
     assert date_long(FIXED, ZoneInfo("Europe/Prague")) == "čt 1. 10. 2026"
     assert tz_abbr(FIXED, ZoneInfo("Asia/Kolkata")) == "IST"
-    assert tz_abbr(FIXED, ZoneInfo("America/Caracas")).startswith("UTC−4") or True
+    assert tz_abbr(FIXED, ZoneInfo("America/Caracas")) == "UTC−4"
+
+
+def test_local_zone(monkeypatch):
+    from obloha.ui.formatting import local_zone
+
+    monkeypatch.setenv("TZ", "America/New_York")
+    assert str(local_zone()) == "America/New_York"
+
+
+def test_events_clamped_near_ephemeris_end(model):
+    model.time.set_time(datetime(2049, 12, 20, tzinfo=UTC))
+    model.events()  # must not raise although 3 months would leave DE421
+    assert model.passes() == []

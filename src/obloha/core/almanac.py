@@ -35,7 +35,9 @@ TWILIGHT_NAMES = {
 
 def sky_phase(sun_alt: float) -> str:
     """Czech name of the sky state for a given Sun altitude."""
-    if sun_alt >= -0.833:
+    # sun_alt is the refracted (apparent) altitude: the upper limb is on the
+    # horizon at about -0.27° (refraction is already included)
+    if sun_alt >= -0.27:
         return "den"
     if sun_alt >= -6:
         return "občanský soumrak"

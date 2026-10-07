@@ -33,17 +33,41 @@ def test_roundtrip_keeps_comments():
     save_config(cfg, doc)
     text = config_path().read_text()
     assert text.startswith("# Konfigurace aplikace obloha")
-    text = text.replace("[display]", "[display]\n# moje poznámka")
+    assert "[location]" in text and "[display]" not in text  # minimal file
+    text += "\n[display]\n# moje poznámka\nfuture_option = 1\n"
+    text += '\n# oblíbená\n[[favorites]]\n# hvězdárna\nname = "Ondřejov"\n'
+    text += "lat = 49.91\nlon = 14.78\n"
     config_path().write_text(text)
     cfg, doc = load_config()
+    assert cfg.favorites[0].name == "Ondřejov"
     cfg.display.mode = "advanced"
-    cfg.favorites.append(Place(name="Brno", lat=49.195, lon=16.608, elevation=237))
+    cfg.favorites[0].elevation = 528
     save_config(cfg, doc)
     text = config_path().read_text()
-    assert "# moje poznámka" in text
+    assert "# moje poznámka" in text and "future_option = 1" in text
+    assert "# hvězdárna" in text and "elevation = 528" in text
+    cfg.favorites.append(Place(name="Brno", lat=49.195, lon=16.608, elevation=237))
+    save_config(cfg, doc)
     cfg2, _ = load_config()
     assert cfg2.display.mode == "advanced"
-    assert cfg2.favorites[0].name == "Brno"
+    assert [p.name for p in cfg2.favorites] == ["Ondřejov", "Brno"]
+    cfg2.favorites = []
+    save_config(cfg2, _)
+    assert "[[favorites]]" not in config_path().read_text()
+
+
+def test_unreadable_config():
+    config_path().parent.mkdir(parents=True, exist_ok=True)
+    config_path().write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(ConfigError, match="nejde přečíst"):
+        load_config()
+
+
+def test_keys_accept_lists():
+    config_path().parent.mkdir(parents=True, exist_ok=True)
+    config_path().write_text('[keys]\nsearch = ["/", "ctrl+f"]\n')
+    cfg, _ = load_config()
+    assert cfg.keys["search"] == ["/", "ctrl+f"]
 
 
 def test_invalid_config_message():

@@ -26,7 +26,7 @@ from obloha.core.almanac import (
     twilight,
 )
 from obloha.core.bodies import BODY_BY_ID
-from obloha.core.ephem import OutOfRangeError
+from obloha.core.ephem import MAX_DATE, OutOfRangeError
 from obloha.core.events import Event, compute_events
 from obloha.core.location import Location
 from obloha.core.satellites import SatelliteStore, SatPass, current_positions, passes_for_all
@@ -173,6 +173,9 @@ class AppModel:
         self._events_key: tuple[Any, ...] | None = None
         self._passes: list[SatPass] | None = None
         self._passes_key: tuple[Any, ...] | None = None
+        #: bumped whenever cached data become invalid (place, satellites); workers that
+        #: started before a bump do not store their (stale) results
+        self.generation = 0
 
     def safe(self, text: str) -> str:
         """Replace symbols by ASCII in the safe character mode."""
@@ -424,6 +427,7 @@ class AppModel:
         return None
 
     def set_location(self, loc: Location, remember: bool = True) -> None:
+        self.generation += 1
         self.location = loc
         self._scene = None
         self._tonight = None
@@ -511,7 +515,9 @@ class AppModel:
     @property
     def display_zone(self) -> Any:
         if self.cfg.display.time_zone == "observer":
-            return datetime.now().astimezone().tzinfo
+            from obloha.ui.formatting import local_zone
+
+            return local_zone()
         return self.location.zone
 
     def beginner_status(self, scene: SkyScene) -> str:
@@ -654,36 +660,49 @@ class AppModel:
         key = (start.date(), end.date(), self.location)
         if self._events is not None and self._events_key == key:
             return self._events
-        self._events = compute_events(
-            start,
-            end,
-            self.location,
-            moon_limit=self.cfg.events.moon_conjunction_deg,
-            planet_limit=self.cfg.events.planet_conjunction_deg,
+        gen = self.generation
+        end = min(end, MAX_DATE - timedelta(days=2))  # DE421 range
+        result = (
+            compute_events(
+                start,
+                end,
+                self.location,
+                moon_limit=self.cfg.events.moon_conjunction_deg,
+                planet_limit=self.cfg.events.planet_conjunction_deg,
+            )
+            if start < end
+            else []
         )
-        self._events_key = key
-        return self._events
+        if gen == self.generation:
+            self._events = result
+            self._events_key = key
+        return result
 
     def passes(self) -> list[SatPass]:
         start = self.now().replace(second=0, microsecond=0) - timedelta(minutes=10)
         key = (start.replace(minute=0), self.location, len(self.sats))
         if self._passes is not None and self._passes_key == key:
             return self._passes
-        self._passes = (
+        gen = self.generation
+        days = max(0, min(7, (MAX_DATE - start).days - 2))
+        result = (
             passes_for_all(
                 self.sats[:20],
                 start,
                 self.location,
-                days=7,
+                days=days,
                 min_alt=self.cfg.satellites.min_altitude,
             )
-            if self.sats
+            if self.sats and days > 0
             else []
         )
-        self._passes_key = key
-        return self._passes
+        if gen == self.generation:
+            self._passes = result
+            self._passes_key = key
+        return result
 
     def reload_satellites(self) -> None:
+        self.generation += 1
         self.sats = self.sat_store.load()
         self.sat_status = self.sat_store.age_text()
         self._passes = None

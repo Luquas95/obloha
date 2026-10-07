@@ -20,6 +20,7 @@ def make_app(
     compass: bool = False,
     compass_factory=None,  # type: ignore[no-untyped-def]
     persist: bool = False,
+    sync: bool = True,
 ) -> ObloApp:
     cfg, doc = load_config()
     if mode:
@@ -37,7 +38,7 @@ def make_app(
     )
     return ObloApp(
         model,
-        sync=True,
+        sync=sync,
         network=False,
         compass_available=lambda: compass,
         compass_factory=compass_factory,

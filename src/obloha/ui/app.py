@@ -183,6 +183,7 @@ class ObloApp(App[None]):
         self._ticker: Any = None
         self._last_side = 0.0
         self._pending: set[str] = set()
+        self._failed: dict[str, Any] = {}
         self.main = MainScreen()
 
     # ------------------------------------------------------------------ theme
@@ -337,12 +338,15 @@ class ObloApp(App[None]):
         header = self.main.query_one(HeaderBar)
         header.ascii = model.ascii
         t = model.theme
-        header.palette = {
+        palette = {
             "border": int_to_hex(t.border),
             "accent": int_to_hex(t.accent),
             "text": int_to_hex(t.text),
             "muted": int_to_hex(t.muted),
         }
+        if palette != header.palette:
+            header.palette = palette
+            header.refresh()
         scene = model.scene()
         mobile = self.is_mobile
         place = model.location.name
@@ -488,16 +492,20 @@ class ObloApp(App[None]):
         """Run ``fn`` synchronously (tests) or in a worker; returns None while pending."""
         if self.sync:
             return fn()
-        if name in self._pending:
+        state = (self.model.generation, self.model.now().replace(minute=0, second=0, microsecond=0))
+        if name in self._pending or self._failed.get(name) == state:
             return None
         self._pending.add(name)
 
         def job() -> None:
             try:
                 fn()
+            except Exception as exc:  # never retry in a loop; report once
+                self._failed[name] = state
+                self.call_from_thread(self.notify, f"Výpočet selhal: {exc}", severity="error")
             finally:
                 self._pending.discard(name)
-                self.call_from_thread(self.refresh_all, True)
+            self.call_from_thread(self.refresh_all, True)
 
         self.run_worker(job, thread=True, group=name, exclusive=True)
         return None
@@ -560,10 +568,13 @@ class ObloApp(App[None]):
             elif force_tle:
                 self.notify(res.status, severity="warning")
         if cfg.network.weather:
-            model.weather = await fetch_forecast(
-                model.cache, model.location, offline=model.offline, timeout=cfg.network.timeout
+            loc = model.location
+            result = await fetch_forecast(
+                model.cache, loc, offline=model.offline, timeout=cfg.network.timeout
             )
-            model._tonight = None
+            if model.location == loc:  # the place may have changed during the request
+                model.weather = result
+                model._tonight = None
         self.refresh_all(full=True)
 
     def refresh_satellites(self, force: bool = False) -> None:
@@ -740,6 +751,8 @@ class ObloApp(App[None]):
         if loc is None:
             return "žádná oblíbená ani poslední místa"
         self.model.set_location(loc, remember=False)
+        if self.network:
+            self.network_refresh()
         return f"místo: {loc.name}"
 
     def do_compare(self) -> None:
@@ -981,6 +994,8 @@ class ObloApp(App[None]):
         favs = self.model.cfg.favorites
         if 0 <= index < len(favs):
             self.model.set_location(favs[index].to_location())
+            if self.network:
+                self.network_refresh()
             self.refresh_all(full=True)
 
     def action_remove_favorite(self, index: int) -> None:

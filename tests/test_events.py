@@ -142,3 +142,23 @@ def test_kind_filter(prague):
         kinds=["season", "dst"],
     )
     assert [e.kind for e in ev] == ["dst"]
+
+
+def test_inner_planet_conjunctions_are_not_oppositions(prague):
+    from obloha.core.events import opposition_events
+
+    ev = opposition_events(*_span(2026, 2027), prague)
+    inner = [e.title for e in ev if e.bodies[0] in ("mercury", "venus")]
+    assert inner and not any("opozici" in t for t in inner)
+    assert "Venuše v horní konjunkci" in inner and "Venuše v dolní konjunkci" in inner
+
+
+def test_moon_conjunction_is_topocentric(prague):
+    from obloha.core.events import conjunction_events
+
+    t0 = ts_from_datetime(datetime(2026, 10, 5, tzinfo=UTC))
+    t1 = ts_from_datetime(datetime(2026, 10, 8, tzinfo=UTC))
+    ev = [e for e in conjunction_events(t0, t1, prague) if e.bodies == ("moon", "jupiter")]
+    assert len(ev) == 1
+    # geocentric minimum is 0.2°, from Prague the Moon passes 0.6° away
+    assert ev[0].extra["separation"] == pytest.approx(0.58, abs=0.05)

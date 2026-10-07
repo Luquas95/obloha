@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import numpy as np
 from skyfield import almanac
 from skyfield.framelib import ecliptic_frame
 from skyfield.searchlib import find_discrete, find_maxima, find_minima
@@ -15,7 +16,7 @@ from skyfield.searchlib import find_discrete, find_maxima, find_minima
 from obloha.core.almanac import stars_altitude_at
 from obloha.core.bodies import BODY_BY_ID, PLANETS, BodyInfo, body_target
 from obloha.core.eclipses import find_lunar_eclipses, find_solar_eclipses
-from obloha.core.ephem import ephemeris, to_datetime, ts_from_datetime
+from obloha.core.ephem import ephemeris, timescale, to_datetime, ts_from_datetime
 from obloha.core.location import Location
 
 EVENT_KINDS: dict[str, str] = {
@@ -193,6 +194,11 @@ def conjunction_events(
     for a, b, limit, step in pairs:
         times, seps = find_minima(t0, t1, _separation_fn(a, b, step))
         for t, sep in zip(times, seps, strict=False):
+            if a.id == "moon":
+                # lunar parallax (~1°): what the observer sees differs from geocentric
+                if sep > limit + 1.5:
+                    continue
+                t, sep = _topocentric_minimum(a, b, t, location)
             if sep > limit:
                 continue
             e = eph["earth"].at(t)
@@ -218,6 +224,25 @@ def conjunction_events(
     return out
 
 
+def _topocentric_minimum(a: BodyInfo, b: BodyInfo, t: Any, location: Location) -> tuple[Any, float]:
+    """Refine a close approach as seen from ``location`` (±12 h, 1 min resolution)."""
+    ts = timescale()
+
+    def seps(times: Any) -> Any:
+        obs = location.observer.at(times)
+        pa = obs.observe(body_target(a)).apparent()
+        pb = obs.observe(body_target(b)).apparent()
+        return pa.separation_from(pb).degrees
+
+    coarse = ts.tt_jd(t.tt + np.linspace(-0.5, 0.5, 145))  # 10 min steps
+    c = seps(coarse)
+    k = int(np.argmin(c))
+    fine = ts.tt_jd(coarse.tt[k] + np.linspace(-10, 10, 21) / 1440.0)
+    f = seps(fine)
+    m = int(np.argmin(f))
+    return fine[m], float(f[m])
+
+
 def _fingers(sep: float) -> str:
     if sep < 1:
         return "méně než šířka malíčku na natažené ruce"
@@ -236,13 +261,14 @@ def opposition_events(t0: Any, t1: Any, location: Location) -> list[Event]:
         for t, c in zip(times, codes, strict=False):
             c = int(c)
             dist = eph["earth"].at(t).observe(body_target(p)).distance().au
-            if c == 1:
+            inner = p.id in ("mercury", "venus")
+            if c == 1 and not inner:  # for inner planets the code only flips sides
                 title = f"{p.name} v opozici"
                 text = (
                     f"{p.name} je naproti Slunci: celou noc nad obzorem, nejblíž Zemi a "
                     "nejjasnější v roce. Nejlepší čas na pozorování."
                 )
-            elif p.id in ("mercury", "venus"):
+            elif inner:
                 inferior = dist < 1.0
                 title = f"{p.name} v {'dolní' if inferior else 'horní'} konjunkci"
                 text = f"{p.name} je ve směru Slunce a není vidět."

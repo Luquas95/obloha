@@ -125,3 +125,42 @@ def test_score_word(score, word):
 
 def test_forecast_lookup_missing():
     assert Forecast((), NOW).at(NOW) is None
+
+
+def test_corrupt_cache_is_ignored(tmp_path, prague):
+    from obloha.core.weather import _cache_file, load_cached
+
+    path = _cache_file(tmp_path, prague)
+    path.parent.mkdir(parents=True)
+    for content in ("[]", '{"data": {}}', '{"fetched_at": "2026-10-01T17:00:00", "data": {}}'):
+        path.write_text(content)
+        assert load_cached(tmp_path, prague, NOW) is None
+
+
+@respx.mock
+async def test_malformed_payload(tmp_path, prague):
+    bad = _payload()
+    bad["hourly"]["cloud_cover"] = [1]
+    respx.get(OPEN_METEO).mock(return_value=httpx.Response(200, json=bad))
+    res = await fetch_forecast(tmp_path, prague, now=NOW)
+    assert res.forecast is None and "nepodařilo" in res.status
+
+
+def test_unknown_hours_do_not_win(prague):
+    from obloha.core.weather import HourScore
+
+    t = NOW
+    scores = [
+        HourScore(t + timedelta(hours=i), s, 1, 1, c, u)
+        for i, (s, c, u) in enumerate(
+            [
+                (60, 10, False),
+                (60, 10, False),
+                (100, None, True),
+                (100, None, True),
+                (100, None, True),
+            ]
+        )
+    ]
+    win = best_window(scores)
+    assert win == (t, t + timedelta(hours=2))

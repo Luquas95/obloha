@@ -70,7 +70,7 @@ def test_time_zones(db, query, tz):
 def test_timezone_at_coordinates(db):
     assert timezone_at(50.08, 14.44) == "Europe/Prague"
     assert timezone_at(-33.87, 151.21) == "Australia/Sydney"
-    assert db.nearest(49.2, 16.6).name in {"Brno", "Brno-město"} or db.nearest(49.2, 16.6)
+    assert db.nearest(49.2, 16.6).label == "Brno, okr. Brno-město"
 
 
 def _sunrise(city, day=datetime(2026, 3, 20, tzinfo=UTC)):

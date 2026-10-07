@@ -14,6 +14,7 @@ from typing import Any, Literal
 
 import tomlkit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from tomlkit.items import AoT
 
 from obloha.core.location import Location
 
@@ -151,7 +152,7 @@ class Config(BaseModel):
     satellites: SatelliteConfig = Field(default_factory=SatelliteConfig)
     network: NetworkConfig = Field(default_factory=NetworkConfig)
     events: EventsConfig = Field(default_factory=EventsConfig)
-    keys: dict[str, str] = Field(default_factory=dict)
+    keys: dict[str, str | list[str]] = Field(default_factory=dict)
 
     def beginner_limit(self) -> float:
         from obloha.core.sky import sky_quality_limit
@@ -182,9 +183,12 @@ def load_config(path: Path | None = None) -> tuple[Config, tomlkit.TOMLDocument]
         doc = tomlkit.document()
         for line in HEADER.splitlines():
             doc.add(tomlkit.comment(line.lstrip("# ")))
-        _merge(doc, cfg.model_dump(mode="json"))
+        _merge(doc, {"location": cfg.location.model_dump(mode="json")})
         return cfg, doc
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ConfigError(f"Soubor {path} nejde přečíst: {exc}") from exc
     try:
         doc = tomlkit.parse(text)
     except Exception as exc:  # tomlkit raises various parse errors
@@ -199,39 +203,70 @@ def load_config(path: Path | None = None) -> tuple[Config, tomlkit.TOMLDocument]
     return cfg, doc
 
 
-def _merge(target: Any, data: dict[str, Any]) -> None:
-    """Update a tomlkit container with plain data, keeping existing comments."""
+def _plain(item: Any) -> Any:
+    return item.unwrap() if hasattr(item, "unwrap") else item
+
+
+def _fill_table(tbl: Any, item: dict[str, Any]) -> None:
+    for k, v in item.items():
+        if v is None:
+            if k in tbl:
+                del tbl[k]
+        elif k not in tbl or _plain(tbl[k]) != v:
+            tbl[k] = v
+
+
+def _merge(target: Any, data: dict[str, Any], defaults: dict[str, Any] | None = None) -> None:
+    """Update a tomlkit container with plain data.
+
+    Keeps comments and unknown keys, updates values already present, and adds only
+    values that differ from ``defaults`` (so a minimal file stays minimal).
+    """
+    defaults = defaults or {}
     for key, value in data.items():
+        default = defaults.get(key)
+        present = key in target
         if isinstance(value, dict):
-            if key not in target or not isinstance(target[key], dict):
+            if not present:
+                if value == default:
+                    continue
                 target[key] = tomlkit.table()
-            _merge(target[key], value)
-        elif isinstance(value, list) and value and isinstance(value[0], dict):
+            elif not isinstance(target[key], dict):
+                target[key] = tomlkit.table()
+            _merge(target[key], value, default if isinstance(default, dict) else {})
+        elif isinstance(value, list) and (
+            (value and isinstance(value[0], dict)) or (present and isinstance(target[key], AoT))
+        ):
+            if not value:
+                if present:
+                    del target[key]
+                continue
+            existing = target[key] if present and isinstance(target[key], AoT) else None
+            if existing is not None and len(existing) == len(value):
+                for tbl, item in zip(existing, value, strict=True):
+                    _fill_table(tbl, item)  # in place: comments inside entries survive
+                continue
             aot = tomlkit.aot()
             for item in value:
                 tbl = tomlkit.table()
-                for k, v in item.items():
-                    if v is not None:
-                        tbl[k] = v
+                _fill_table(tbl, item)
                 aot.append(tbl)
             target[key] = aot
         elif value is None:
-            if key in target:
+            if present:
                 del target[key]
-        else:
-            if key in target and target[key] == value:
-                continue
+        elif present:
+            if _plain(target[key]) != value:
+                target[key] = value
+        elif value != default:
             target[key] = value
-    for key in list(target.keys()):
-        if key not in data:
-            del target[key]
 
 
 def save_config(cfg: Config, doc: tomlkit.TOMLDocument, path: Path | None = None) -> None:
     """Write ``cfg`` into ``doc`` (preserving comments) and save it."""
     path = path or config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    _merge(doc, cfg.model_dump(mode="json"))
+    _merge(doc, cfg.model_dump(mode="json"), Config().model_dump(mode="json"))
     tmp = path.with_suffix(".tmp")
     tmp.write_text(tomlkit.dumps(doc), encoding="utf-8")
     tmp.replace(path)

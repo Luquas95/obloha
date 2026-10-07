@@ -109,13 +109,20 @@ def normalize_key(key: str) -> str:
         return _CHAR_KEYS[low]
     if "+" in k and len(k) > 1:
         mods, _, base = k.rpartition("+")
+        if not base or not mods:
+            raise KeymapError(f"neúplná klávesa {key!r}")
         mod_parts = [m.lower() for m in mods.split("+")]
         for m in mod_parts:
             if m not in ("ctrl", "alt", "shift"):
                 raise KeymapError(f"neznámý modifikátor {m!r} v {key!r}")
+        if len(set(mod_parts)) != len(mod_parts):
+            raise KeymapError(f"opakovaný modifikátor v {key!r}")
         if "ctrl" in mod_parts and "shift" in mod_parts:
             raise KeymapError(f"{key!r}: kombinace Ctrl+Shift nejsou podporované (Termux)")
-        return "+".join([*mod_parts, normalize_key(base) if len(base) > 1 else base.lower()])
+        if mod_parts == ["shift"] and len(base) == 1 and base.isalpha():
+            return base.upper()
+        norm_base = normalize_key(base) if len(base) > 1 else base.lower()
+        return "+".join([*mod_parts, norm_base])
     if len(k) == 1 and (k.isalnum() or k in _CHAR_KEYS):
         return k
     if low.startswith("f") and low[1:].isdigit():
