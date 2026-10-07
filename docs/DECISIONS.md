@@ -78,7 +78,7 @@ Záznam rozhodnutí přijatých během vývoje (nejnovější dole v každé sek
   (`render_line`) a **překresluje pouze řádky, jejichž hash se změnil**.
 - **Výkon:** limit 50 ms na scénu + render celé oblohy 120×40 se všemi vrstvami
   (benchmark test, nejlepší ze 7 běhů; v sandboxu ~33 ms). Na pomalejších strojích lze
-  test zmírnit `OBLOHA_BENCH_FACTOR`.
+  test zmírnit `OBLOHA_BENCH_FACTOR`; CI na sdílených runnerech používá faktor 2.
 - **Pohled z okna** (začátečník): válcová projekce s horizontem dole; svislé měřítko se
   natahuje (max. 2×), aby horní okraj končil u zenitu. Siluety střech jsou
   deterministický pseudonáhodný profil podle azimutu (otáčí se s pohledem).
