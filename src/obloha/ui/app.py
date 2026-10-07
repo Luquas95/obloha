@@ -302,7 +302,7 @@ class ObloApp(App[None]):
                     f"{model.location.coords_text()}",
                 ]
                 del l1
-            header.set_content(place, state, lines, compact=True)
+            header.set_content(place, state, [model.safe(x) for x in lines], compact=True)
             return
         if model.beginner:
             lines = [model.beginner_status(scene)]

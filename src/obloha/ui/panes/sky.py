@@ -97,7 +97,7 @@ class SkyPane(Vertical):
             box.border_title = title
             box.border_subtitle = "◀ ▶ otočit · ▲ ▼ výš/níž" if not self.oapp.is_mobile else ""
             side_box.border_title = "CO TEĎ UVIDÍŠ"
-            self.side.update(self._beginner_side())
+            self.side.update(model.safe(self._beginner_side()))
         else:
             if model.adv_view == "full":
                 box.border_title = "OBLOHA · celá obloha"
@@ -109,7 +109,7 @@ class SkyPane(Vertical):
                 )
                 box.border_subtitle = f"výška středu {model.dir_alt:.0f}°"
             side_box.border_title = "VYBRÁNO"
-            self.side.update(self._advanced_side())
+            self.side.update(model.safe(self._advanced_side()))
         self._update_lesson()
 
     # ------------------------------------------------------------------ beginner

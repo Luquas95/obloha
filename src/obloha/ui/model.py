@@ -67,6 +67,36 @@ class TonightData:
         return max((s.score for s in self.scores), default=0)
 
 
+#: replacements of symbols that may have a different width in some fonts/tmux
+ASCII_TABLE = str.maketrans(
+    {
+        "☉": "O",
+        "☽": "C",
+        "✦": "*",
+        "●": "o",
+        "◐": "D",
+        "◑": "C",
+        "○": "O",
+        "◌": "o",
+        "☿": "Me",
+        "♀": "Ve",
+        "♂": "Ma",
+        "♃": "Ju",
+        "♄": "Sa",
+        "♅": "Ur",
+        "♆": "Ne",
+        "▲": "^",
+        "☄": "*",
+        "☌": "~",
+        "◷": "@",
+        "◉": "O",
+        "⁘": "::",
+        "◆": "#",
+        "▾": "v",
+    }
+)
+
+
 class AppModel:
     """Holds the whole application state; the Textual app only renders it."""
 
@@ -143,6 +173,10 @@ class AppModel:
         self._events_key: tuple[Any, ...] | None = None
         self._passes: list[SatPass] | None = None
         self._passes_key: tuple[Any, ...] | None = None
+
+    def safe(self, text: str) -> str:
+        """Replace symbols by ASCII in the safe character mode."""
+        return text.translate(ASCII_TABLE) if self.ascii else text
 
     # ------------------------------------------------------------------ time & scene
     def now(self) -> datetime:
@@ -556,7 +590,7 @@ class AppModel:
 
             bar_txt = f"pozorovatelnost {bar(score / 100)} {score}"
         line2 = f"{self.location.coords_text()}   {bar_txt}{cloud}"
-        return line1, line2
+        return self.safe(line1), self.safe(line2)
 
     def highlight_text(self, scene: SkyScene) -> str:
         """The most interesting thing right now (e.g. ``♄ Saturn u opozice``)."""

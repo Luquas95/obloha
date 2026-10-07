@@ -108,7 +108,7 @@ class TonightPane(VerticalScroll):
         text.append(data.weather_status, Style(color=f"#{t.muted:06x}"))
         self.timeline.update(text)
         # ---------------------------------------------------------------- sun & moon
-        self.sunmoon.border_title = "☉ SLUNCE  ·  ☽ MĚSÍC"
+        self.sunmoon.border_title = model.safe("☉ SLUNCE  ·  ☽ MĚSÍC")
         sm = Text(no_wrap=True, overflow="crop")
         rows = [
             ("západ Slunce", hm(tw.sunset, zone)),
@@ -169,11 +169,12 @@ class TonightPane(VerticalScroll):
             else:
                 window, top = "pod obzorem", "u Slunce" if p.best_alt < 5 else "nevhodně"
             con = model.scene().cat.constellation_cs(p.constellation)
+            sym = model.safe(p.info.symbol)
             if narrow:
-                pt.append(f"{p.info.symbol} {p.info.name:<9}{num(p.mag):>5}  {top:<11}{stars}\n")
+                pt.append(f"{sym} {p.info.name:<9}{num(p.mag):>5}  {top:<11}{stars}\n")
             else:
                 pt.append(
-                    f"{p.info.symbol} {p.info.name:<10}{num(p.mag):>5}   {con[:13]:<14}"
+                    f"{sym} {p.info.name:<10}{num(p.mag):>5}   {con[:13]:<14}"
                     f"{window:<19}{top:<12}{stars}\n"
                 )
         tip = self._planet_tip()
